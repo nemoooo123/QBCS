@@ -63,7 +63,7 @@ def main() -> int:
     parser.add_argument("--gpu-device", type=int, default=0)
     parser.add_argument("--gpu-memory-mb", type=int, default=0)
     parser.add_argument("--gpu-wait-us", type=int, default=200)
-    parser.add_argument("--algorithms", default=",".join(map(str, range(1, 11))))
+    parser.add_argument("--algorithms", default=",".join(map(str, range(1, 10))))
     parser.add_argument("--suite", choices=("smoke", "full"), default="full")
     parser.add_argument("--experiments", type=int, default=3)
     parser.add_argument("--timeout", type=float, default=120)
@@ -82,8 +82,8 @@ def main() -> int:
         parser.error("--gpu-decodes must contain thread and/or warp")
     if not threads or min(threads) < 1 or args.experiments < 1 or args.gpu_batch < 1:
         parser.error("threads, experiments and gpu-batch must be positive")
-    if not algorithms or any(a not in range(1, 11) for a in algorithms):
-        parser.error("algorithm IDs must be 1..10")
+    if not algorithms or any(a not in range(1, 10) for a in algorithms):
+        parser.error("algorithm IDs must be 1..9")
     cases = CASES if args.suite == "full" else CASES[:3]
     temporary = tempfile.TemporaryDirectory(prefix="qbcs-regression-") if args.work_dir is None else None
     root = Path(temporary.name) if temporary else args.work_dir.resolve()

@@ -20,7 +20,7 @@ Default test matrix:
 
 | Item | Coverage |
 |---|---|
-| Algorithms | All of ID 1–10 |
+| Algorithms | All of ID 1–9 |
 | Problems | 3-bit, 5-bit, identity, a single swap with maximum Hamming distance, all distance-1 marker steps |
 | Population | N = 4, 5, 10, covering odd and even |
 | Update step | Original defaults, `--delta 0`, `--delta 1` |
@@ -29,7 +29,7 @@ Default test matrix:
 | GPU options | batch = 17; CUDA runs both thread and warp decoders; non-CPU modes add `--check-gpu` |
 | Correctness | Every run adds `--verify`, checking the truth table of every evaluated circuit |
 
-That is 9 cases × 10 algorithms. CPU and emulated each have 2 thread settings; emulated runs only the shared scalar core, so it runs thread mode once even if `--gpu-decodes` includes warp. The default `cpu,emulated` gives **360 candidate comparisons** in total, plus 90 reference runs of the original version. Only CUDA mode has 2 × 2 thread/decoder settings, so `--backends cuda` alone also gives 360 candidate comparisons.
+That is 9 cases × 9 algorithms. CPU and emulated each have 2 thread settings; emulated runs only the shared scalar core, so it runs thread mode once even if `--gpu-decodes` includes warp. The default `cpu,emulated` gives **324 candidate comparisons** in total, plus 81 reference runs of the original version. Only CUDA mode has 2 × 2 thread/decoder settings, so `--backends cuda` alone also gives 324 candidate comparisons.
 
 Each comparison checks the full CSV, including every generation of every trial and the mean and standard deviation; only `Execution_Time(s)` is excluded. It also compares each trial's final best count, the global minimum, the final statistics, and **the complete global best gate list in the report, including gate order**. The original output does not include each trial's own best gate list, so this CLI test does not claim to compare data that is not output.
 
@@ -44,7 +44,7 @@ python3 tests/regression.py \
   --work-dir regression_cuda
 ```
 
-A failed CUDA run reports an error; the test never falls back to the CPU. `--suite smoke` runs only the first three cases but keeps all 10 algorithms. To also check a population split across multiple batches:
+A failed CUDA run reports an error; the test never falls back to the CPU. `--suite smoke` runs only the first three cases but keeps all 9 algorithms. To also check a population split across multiple batches:
 
 ```bash
 python3 tests/regression.py \

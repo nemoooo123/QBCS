@@ -17,13 +17,12 @@ const char* algo_name(Algo a) {
         case Algo::PSO:    return "PSO";
         case Algo::WOA:    return "WOA";
         case Algo::ABC:    return "ABC";
-        case Algo::AE_QTS_GB: return "AE-QTS-GB";
     }
     return "Other";
 }
 
 bool algo_from_id(int id, Algo& out) {
-    if (id < 1 || id > 10) return false;
+    if (id < 1 || id > 9) return false;
     out = static_cast<Algo>(id);
     return true;
 }
@@ -69,7 +68,6 @@ RunResult run_experiment(Algo algo, const Encoding& E, const Params& P, Rng& rng
         case Algo::PSO:    return run_pso(E, P, rng, target);
         case Algo::WOA:    return run_woa(E, P, rng, target);
         case Algo::ABC:    return run_abc(E, P, rng, target);
-        case Algo::AE_QTS_GB: return run_aeqts_gb(E, P, rng, target);
     }
     return RunResult{};
 }

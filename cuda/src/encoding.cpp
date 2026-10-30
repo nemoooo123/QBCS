@@ -251,14 +251,17 @@ void repair_l4_step(uint8_t* bits, int len, Rng& rng) {
     const int imbalance = (zeros - ones) / 2;  // int() truncates toward zero, as in Python
     if (imbalance == 0) return;
 
-    static thread_local std::vector<int> pos;
-    pos.clear();
+    // A step has 2d - 2 <= 62 bits (d <= 32 qubits), so a stack array suffices. Do not use
+    // a thread_local vector here: MinGW's thread-exit TLS destructors corrupt the heap.
+    constexpr int kMaxStepBits = 64;
+    if (len > kMaxStepBits) throw std::runtime_error("Layer-4 step longer than 64 bits");
+    int pos[kMaxStepBits];
     const uint8_t from = imbalance > 0 ? 0 : 1;
     const int k = imbalance > 0 ? imbalance : (ones - zeros) / 2;
+    int m = 0;
     for (int i = 0; i < len; ++i)
-        if (bits[i] == from) pos.push_back(i);
+        if (bits[i] == from) pos[m++] = i;
     // random.sample(pos, k): partial Fisher-Yates over the candidate positions
-    const int m = static_cast<int>(pos.size());
     for (int i = 0; i < k; ++i) {
         int j = rng.randint(i, m - 1);
         std::swap(pos[i], pos[j]);

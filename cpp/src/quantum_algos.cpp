@@ -43,16 +43,15 @@ static void rotate_toward(QLayers& Q, const Sample& gb, double dt) {
     }
 }
 
-enum class QKind { AEQTS, QTS, QEA, AEQTS_GB };
+enum class QKind { AEQTS, QTS, QEA };
 
 static RunResult run_quantum(QKind kind, const Encoding& E, const Params& P, Rng& rng,
                              const std::vector<int>& target) {
     const int N = P.num_neighbors;
     const double delta = kind == QKind::AEQTS        ? P.delta_theta_aeqts
                        : kind == QKind::QTS          ? P.delta_theta_qts
-                       : kind == QKind::AEQTS_GB     ? P.delta_theta_aeqts_gb
                                                      : P.delta_theta_qea;
-    const bool track_gb = kind == QKind::QEA || kind == QKind::AEQTS_GB;
+    const bool track_gb = kind == QKind::QEA;
 
     Synthesizer S(E);
     QLayers Q;
@@ -95,14 +94,6 @@ static RunResult run_quantum(QKind kind, const Encoding& E, const Params& P, Rng
             case QKind::QEA:
                 rotate_toward(Q, gb, delta);
                 break;
-            case QKind::AEQTS_GB: {
-                // Same pairing/step schedule as AE-QTS, but the "best" side of every
-                // pair is the historical global-best sample, not this generation's t-th best.
-                const int limit = N / 2;
-                for (int t = 0; t < limit; ++t)
-                    rotate_best_vs_worst(Q, gb, nbrs[idx[N - 1 - t]], delta / (t + 1));
-                break;
-            }
         }
 
         R.history[iter] = best;
@@ -121,9 +112,6 @@ RunResult run_qts(const Encoding& E, const Params& P, Rng& rng, const std::vecto
 }
 RunResult run_qea(const Encoding& E, const Params& P, Rng& rng, const std::vector<int>& target) {
     return run_quantum(QKind::QEA, E, P, rng, target);
-}
-RunResult run_aeqts_gb(const Encoding& E, const Params& P, Rng& rng, const std::vector<int>& target) {
-    return run_quantum(QKind::AEQTS_GB, E, P, rng, target);
 }
 
 }  // namespace qbcs

@@ -5,7 +5,7 @@ This checks sampling outputs supplied by Python, complete synthesized gate
 lists, fitness order, and the replay's probability updates for algorithms 1..3.
 It does not claim that Python and C++ use an identical RNG or that the replay's
 copied update helper alone validates the production driver. regression.py
-separately compares the actual executable across all 10 algorithms.
+separately compares the actual executable across all 9 algorithms.
 
 Existing traces may be replayed without importing any Python project modules:
   python tests/python_replay.py --replay-binary build/replay_test --traces trace_*.txt

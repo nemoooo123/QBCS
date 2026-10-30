@@ -2,7 +2,7 @@
 
 Date: 2026-09-23. Sources: the uploaded Python archive and `qbcs_cpp.zip`. Hashes of the source archives / unmodified C++ reference are in `validation/source_manifest.json`.
 
-> Note: this record predates the removal of the ROT family (IDs 11–13), so the counts below include 13 algorithms. After the removal, the regression for IDs 1–10 was re-run (CPU and emulated backends, 1 and 3 threads) and the results still matched the original C++.
+> Note: this record predates the removal of the extra variants (IDs 10–13), so the counts below include 13 algorithms. After the removal, the regression for IDs 1–9 was re-run (CPU and emulated backends, 1 and 3 threads) and the results still matched the original C++.
 
 ## Completed Validation
 

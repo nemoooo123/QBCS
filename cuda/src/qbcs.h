@@ -183,8 +183,7 @@ private:
 // ---------------------------------------------------------------------------------------
 // Algorithm driver API
 // ---------------------------------------------------------------------------------------
-enum class Algo { AE_QTS = 1, QTS = 2, QEA = 3, GA = 4, DE = 5, TS = 6, PSO = 7, WOA = 8, ABC = 9,
-                  AE_QTS_GB = 10 };
+enum class Algo { AE_QTS = 1, QTS = 2, QEA = 3, GA = 4, DE = 5, TS = 6, PSO = 7, WOA = 8, ABC = 9 };
 const char* algo_name(Algo a);
 bool algo_from_id(int id, Algo& out);
 
@@ -195,9 +194,6 @@ struct Params {
     double delta_theta_aeqts = 0.01;
     double delta_theta_qts = 0.01;
     double delta_theta_qea = 0.0005;
-    // AE-QTS-GB: same pairing/step schedule as AE-QTS, but the "best" side of every
-    // pair is the historical global-best sample instead of this generation's t-th best.
-    double delta_theta_aeqts_gb = 0.01;
     // GA
     int ga_k = 5; double ga_pc = 0.8; double ga_pm = 0.005;
     // DE
@@ -238,7 +234,6 @@ RunResult run_ts   (const Encoding& E, const Params& P, Rng& rng, const std::vec
 RunResult run_pso  (const Encoding& E, const Params& P, Rng& rng, const std::vector<int>& target);
 RunResult run_woa  (const Encoding& E, const Params& P, Rng& rng, const std::vector<int>& target);
 RunResult run_abc  (const Encoding& E, const Params& P, Rng& rng, const std::vector<int>& target);
-RunResult run_aeqts_gb(const Encoding& E, const Params& P, Rng& rng, const std::vector<int>& target);
 
 // Shared helpers used by several algorithms (defined in algorithms_common.cpp)
 // Stable ascending sort of indices by fitness (Python: sorted(..., key=gate_count)).

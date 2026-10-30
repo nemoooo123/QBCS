@@ -15,7 +15,7 @@ fi
 echo $$ > "$LOCK"
 trap 'rm -f "$LOCK"' EXIT
 
-EXE=./bin/qbcs.exe
+EXE="${QBCS_EXE:-./build/qbcs}"
 DATA=data/problems_3bit_all.txt
 LOG=run_all_3bit_delta005.log
 TOTAL=40320

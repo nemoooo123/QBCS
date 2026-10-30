@@ -94,8 +94,8 @@ def main() -> int:
         parser.error("positive counts are required; neighbors >= 4; warmups >= 0")
     if not decodes or any(d not in ("thread", "warp") for d in decodes):
         parser.error("--gpu-decodes must contain thread and/or warp")
-    if args.algorithm not in range(1, 11):
-        parser.error("algorithm must be in 1..10")
+    if args.algorithm not in range(1, 10):
+        parser.error("algorithm must be in 1..9")
     if len(threads) != len(set(threads)) or len(batches) != len(set(batches)) or len(decodes) != len(set(decodes)):
         parser.error("thread, batch, and decode lists must not contain duplicate configurations")
     if args.backend == "emulated":

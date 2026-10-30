@@ -1,6 +1,6 @@
 # QBCS CUDA: A GPU Version That Preserves the Original Search Logic
 
-This project is a rewrite of the Python / C++ quantum Boolean circuit synthesis programs, using an architecture in which **C++ controls the search and CUDA performs batched synthesis and fitness evaluation**. It keeps the original C++ version's 10 algorithms (ID 1–10; the original C++ ID 11–13 ROT family has been removed), four-layer encoding, RNG, Layer 4 repair, ranking, and update order. The added parallelism applies only to mutually independent candidate solutions and independent trials.
+This project is a rewrite of the Python / C++ quantum Boolean circuit synthesis programs, using an architecture in which **C++ controls the search and CUDA performs batched synthesis and fitness evaluation**. It keeps the original C++ version's 9 algorithms (ID 1–9; the original C++ variants with IDs 10–13 have been removed), four-layer encoding, RNG, Layer 4 repair, ranking, and update order. The added parallelism applies only to mutually independent candidate solutions and independent trials.
 
 **Status: compilation and linking with NVCC 13.0.88 / `sm_120` have passed, and the equivalence checks on the CPU have passed. No NVIDIA GPU was available in the build environment, so the CUDA kernels' correctness on real hardware, Compute Sanitizer checks, and the speedup have not yet been measured.** Detailed evidence is in `validation/`, `tests/validation/`, and `docs/VALIDATION.md`. If CUDA is unavailable at run time the program reports an error; use `--backend cpu` to select the CPU explicitly.
 
@@ -89,9 +89,8 @@ Python and C++ already used different RNGs and different sampling call orders. T
 | 7 | PSO | Original continuous position / velocity, discretization, and pbest / gbest |
 | 8 | WOA | Original in-generation immediate update of population / leader |
 | 9 | ABC | Original scout → employed → onlooker order with in-place updates |
-| 10 | AE-QTS-GB | Original historical-best harmonic probability update |
 
-**ID 1 in the original program is not an angle-rotation version.** For IDs 1 / 2 / 3 / 10, `--delta` is a direct probability step. See `docs/REFERENCE_AUDIT.md` for the full audit.
+**ID 1 in the original program is not an angle-rotation version.** For IDs 1 / 2 / 3, `--delta` is a direct probability step. See `docs/REFERENCE_AUDIT.md` for the full audit.
 
 ## 3. Acceleration Architecture
 
@@ -138,7 +137,7 @@ These come from the allocation formula; they are not measured GPU usage or run t
 
 ## 5. Per-Generation Verification on Real Hardware
 
-`reference_cpp/` contains the original C++ sources (identical to `../cpp/src`, with the ROT family removed as well). It is the baseline for per-generation comparison and can be built on its own. From the `cuda` directory:
+`reference_cpp/` contains the original C++ sources (identical to `../cpp/src`). It is the baseline for per-generation comparison and can be built on its own. From the `cuda` directory:
 
 ```bash
 cmake -S reference_cpp -B build-reference -DCMAKE_BUILD_TYPE=Release
@@ -148,7 +147,7 @@ python3 tests/regression.py --baseline build-reference/qbcs --candidate build/qb
 
 On Windows, change the two executable paths to `build-reference/Release/qbcs.exe` and `build/Release/qbcs_cuda.exe`, and `python3` to `python`.
 
-The full regression covers all 10 algorithms, odd and even N, delta edge cases, identity, distance-1 steps, different thread counts, and splitting across batches. Each comparison checks every trial's full history, each trial's best gate count, and the complete gate list of the global best circuit; timing fields are excluded. See `tests/README.md` for details.
+The full regression covers all 9 algorithms, odd and even N, delta edge cases, identity, distance-1 steps, different thread counts, and splitting across batches. Each comparison checks every trial's full history, each trial's best gate count, and the complete gate list of the global best circuit; timing fields are excluded. See `tests/README.md` for details.
 
 Small problems can additionally be checked with Compute Sanitizer on a GPU. The following commands have not yet been run in our environment:
 

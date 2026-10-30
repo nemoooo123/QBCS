@@ -1,7 +1,7 @@
 # qbcs — Quantum Boolean Circuit Synthesis (Stepwise Encoding + AE-QTS), C++17 Version
 
 This is a C++17 port of the Python implementation in [`../python`](../python). Its features and command-line interface follow the original `main.py`.
-All nine Python algorithms (AE-QTS, QTS, QEA, GA, DE, TS, PSO, WOA, ABC) are ported, plus one C++-only variant, AE-QTS-GB (ID 10).
+All nine algorithms (AE-QTS, QTS, QEA, GA, DE, TS, PSO, WOA, ABC) are ported.
 It is about 120–180× faster than Python on a single thread, and can also run trials in parallel with multiple threads.
 
 ## File Mapping
@@ -13,7 +13,7 @@ It is about 120–180× faster than Python on a single thread, and can also run 
 | `src/synth.cpp` | `utils/topology.py` | `decode_and_synthesize` → `synthesize_route` → `generate_state_trajectory` → `assemble_reversible_circuit` (`_MRAccumulator`: A·A = I cancellation + Moving Rule), `verify_circuit_logic` |
 | `src/quantum_algos.cpp` | `core/AE_QTS.py`, `QTS.py`, `QEA.py` | The three share one main loop and differ only in the `updateQ` rule |
 | `src/baseline_algos.cpp` | `core/GA.py`, `DE.py`, `TS.py`, `PSO.py`, `WOA.py`, `ABC.py` | The six baselines |
-| `src/data_loader.{h,cpp}` + `data/problems.txt` | `utils/data_loader.py` | 75 benchmark truth tables (plain text; adding problems needs no recompilation) |
+| `src/data_loader.{h,cpp}` + `data/problems.txt` | `utils/data_loader.py` | 82 benchmark truth tables, 3–17 bits (plain text; adding problems needs no recompilation) |
 | `src/main.cpp` | `main.py` | CLI, multithreaded trials, `.txt` / `.csv` output |
 | `tests/dump_replay.py`, `tests/replay_test.cpp` | — | Bit-exact equivalence test against the Python version (see below) |
 | `tools/csv_to_xlsx.py` | — | Optional: converts `.csv` back to the original `.xlsx` layout |
@@ -68,7 +68,7 @@ Same as `main.py`: `qbcs [num_bits] [problem_idx] [algo_id]`. If the positional 
 ./qbcs 5 1 1 --experiments 3 --iterations 300 --verify   # simulate every synthesized circuit on all 2^n inputs
 ```
 
-algo_id: 1 AE-QTS, 2 QTS, 3 QEA, 4 GA, 5 DE, 6 TS, 7 PSO, 8 WOA, 9 ABC, 10 AE-QTS-GB.
+algo_id: 1 AE-QTS, 2 QTS, 3 QEA, 4 GA, 5 DE, 6 TS, 7 PSO, 8 WOA, 9 ABC.
 
 Main options (defaults = `main.py`):
 
@@ -95,7 +95,7 @@ The `.csv` layout is identical to the DataFrame Python writes to `.xlsx` with pa
 the first column is the index (`Trial_1`…, `Average_Convergence`, `Std_Deviation`), followed by `Gen_1`…`Gen_N` and `Execution_Time(s)`.
 The `Std_Deviation` row uses the sample standard deviation (ddof = 1) like pandas, and the `μ ± σ` in the `.txt` uses ddof = 0 like `np.std`.
 
-For `plot_results.py`, change `pd.read_excel(path)` to `pd.read_csv(path, index_col=0)`,
+To load a result in pandas, use `pd.read_csv(path, index_col=0)` instead of `pd.read_excel(path)`,
 or run `python tools/csv_to_xlsx.py exp` to convert a whole directory back to `.xlsx`.
 
 ### Adding Problems
@@ -147,6 +147,10 @@ A full 13-bit experiment (100 trials × 10000 generations) takes about 13 hours 
 5. Python's no-op operations on the `999` marker (TS flipping Layer 4's `[0]`, GA/WOA/ABC mutating markers) are no-ops in C++ as well,
    but the probability of selecting a marker is preserved, so the distribution of search behavior is unchanged.
 6. Multithreading: each trial's seed = hash(`--seed`, trial number), so the same `--seed` gives the same results with any `--threads`.
+
+## Batch Scripts
+
+`run_all_3bit_delta005.sh`, `run_all_3bit_delta005_1000t.sh`, and `run_all_3bit_ga_ts.sh` run AE-QTS, GA, and TS over all 40,320 3-bit permutations in `data/problems_3bit_all.txt`. They use `./build/qbcs` by default; set `QBCS_EXE` to use another executable, e.g. `QBCS_EXE=./qbcs.exe bash run_all_3bit_ga_ts.sh`.
 
 ## License
 

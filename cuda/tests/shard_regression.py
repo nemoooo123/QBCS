@@ -23,7 +23,7 @@ def main() -> int:
     parser.add_argument("--candidate", type=Path, required=True)
     parser.add_argument("--data", type=Path, default=Path(__file__).resolve().parents[1] / "data/problems.txt")
     parser.add_argument("--backend", choices=("cpu", "emulated", "cuda"), default="emulated")
-    parser.add_argument("--algorithms", default=",".join(map(str, range(1, 11))))
+    parser.add_argument("--algorithms", default=",".join(map(str, range(1, 10))))
     parser.add_argument("--gpu-decode", choices=("thread", "warp"), default="warp")
     parser.add_argument("--gpu-batch", type=int, default=3)
     parser.add_argument("--gpu-device", type=int, default=0)
@@ -34,8 +34,8 @@ def main() -> int:
         if not path.is_file():
             parser.error(f"file not found: {path}")
     algorithms = [int(value) for value in args.algorithms.split(",")]
-    if not algorithms or any(a not in range(1, 11) for a in algorithms):
-        parser.error("algorithm IDs must be 1..10")
+    if not algorithms or any(a not in range(1, 10) for a in algorithms):
+        parser.error("algorithm IDs must be 1..9")
     temporary = tempfile.TemporaryDirectory(prefix="qbcs-shards-") if args.work_dir is None else None
     root = Path(temporary.name) if temporary else args.work_dir.resolve()
     root.mkdir(parents=True, exist_ok=True)

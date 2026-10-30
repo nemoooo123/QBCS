@@ -90,9 +90,8 @@ Basis: `C++/src/encoding.cpp:19–56, 209–250`; `C++/src/algorithms_common.cpp
 | 1 | AE-QTS | Current generation's t-th best against t-th worst; probabilities adjusted directly by `delta/(t+1)` |
 | 2 | QTS | Current generation's single best against single worst; probabilities adjusted directly by delta |
 | 3 | QEA | Every bit adjusted by delta toward the historical global best |
-| 10 | AE-QTS-GB | The best side of every pair is the historical global best; probabilities adjusted directly by `delta/(t+1)` |
 
-Although IDs 1, 2, 3, and 10 use the variable name `delta_theta`, they are not amplitude rotations. Go by what the code computes, and do not substitute angle formulas from research documents into the probability versions. The original C++ also had an amplitude-rotation (ROT) family, IDs 11–13, which has been removed from this project.
+Although IDs 1, 2, and 3 use the variable name `delta_theta`, they are not amplitude rotations. Go by what the code computes, and do not substitute angle formulas from research documents into the probability versions. The original C++ also had four extra variants, AE-QTS-GB (ID 10) and the amplitude-rotation (ROT) family (IDs 11–13), which have been removed from this project.
 
 ## Safe Boundaries for Fitness Batching
 

@@ -83,6 +83,6 @@ This version provides per-batch H2D+clear / decode / reduce / D2H event timing, 
 
 ## 6. Reference Files and Reproducibility
 
-`reference_cpp/` is a copy of the original C++ source (with the ROT family, IDs 11–13, removed to match this project); `validation/source_manifest.json` records the hashes of the original archives and reference files before that change. `src/synth.cpp` still serves as the original full-circuit reference. The changes to the search drivers mainly split independent evaluate calls into sampling and batched evaluation; DE uses a trial population buffer to defer acceptance, but all candidates are still generated from the same original population.
+`reference_cpp/` is a copy of the original C++ source (with the extra variants, IDs 10–13, removed to match this project); `validation/source_manifest.json` records the hashes of the original archives and reference files before that change. `src/synth.cpp` still serves as the original full-circuit reference. The changes to the search drivers mainly split independent evaluate calls into sampling and batched evaluation; DE uses a trial population buffer to defer acceptance, but all candidates are still generated from the same original population.
 
 The verified results should be labeled separately: source replay, CPU production driver comparison, shared-core host execution, service concurrency, and NVCC compilation. This evidence supports the ported logic and its buildability; actual GPU execution and performance still need GPU regression / Compute Sanitizer / benchmark runs.

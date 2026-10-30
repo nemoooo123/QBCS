@@ -49,8 +49,6 @@ void usage() {
     std::cout <<
         "Usage: qbcs [num_bits] [problem_idx] [algo_id] [options]\n"
         "  algo_id: 1 AE-QTS  2 QTS  3 QEA  4 GA  5 DE  6 TS  7 PSO  8 WOA  9 ABC\n"
-        "           10 AE-QTS-GB (AE-QTS update rule, but rotates toward the historical\n"
-        "              global-best sample instead of this generation's t-th best)\n"
         "  (positional arguments omitted -> interactive prompts, like main.py)\n"
         "Options:\n"
         "  --experiments N   number of independent trials          (default 100)\n"
@@ -151,7 +149,7 @@ int main(int argc, char** argv) {
         else if (!a.empty() && a[0] == '-') { std::cerr << "unknown option " << a << "\n"; usage(); return 2; }
         else pos.push_back(a);
     }
-    if (delta_given) P.delta_theta_aeqts = P.delta_theta_qts = P.delta_theta_qea = P.delta_theta_aeqts_gb = delta;
+    if (delta_given) P.delta_theta_aeqts = P.delta_theta_qts = P.delta_theta_qea = delta;
 
     // ------------------------------------------------------------------ problem ----------
     DataLoader loader;
@@ -184,7 +182,7 @@ int main(int argc, char** argv) {
         }
     }
     Algo algo;
-    if (!algo_from_id(algo_id, algo)) { std::cerr << "Error: algorithm id must be 1..10\n"; return 1; }
+    if (!algo_from_id(algo_id, algo)) { std::cerr << "Error: algorithm id must be 1..9\n"; return 1; }
 
     std::vector<int> target;
     std::string problem_name;
