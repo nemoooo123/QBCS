@@ -57,7 +57,7 @@ void usage() {
         "Options:\n"
         "  --experiments N   number of independent trials          (default 100)\n"
         "  --iterations N    generations per trial                 (default 10000)\n"
-        "  --neighbors N     population / neighborhood size        (default 10)\n"
+        "  --neighbors N     population / neighborhood size        (default 50)\n"
         "  --threads N       worker threads                        (default: all cores)\n"
         "  --seed S          base random seed (results reproducible for a given seed,\n"
         "                    independent of --threads)             (default: time-based)\n"
@@ -82,8 +82,9 @@ void usage() {
         "  --quiet           no per-experiment progress lines\n"
         "  --no-csv          skip writing the per-generation .csv (txt summary still written)\n"
         "Algorithm parameters (defaults = main.py):\n"
-        "  --delta D (AE-QTS/QTS 0.01, QEA 0.0005)  --ga-k 5 --ga-pc 0.8 --ga-pm 0.005\n"
-        "  --de-cr 0.01  --tabu 45  --pso-w 0.6 --pso-c1 3.0 --pso-c2 1.0  --woa-b 0.45\n"
+        "  --delta D (AE-QTS/QTS 0.01, QEA 0.0005)\n"
+        "  --ga-tsr 0.5 (tournament size = TSR x N; --ga-k K sets it directly) --ga-pc 0.9 --ga-pm 0.001\n"
+        "  --de-cr 0.3  --tabu 150  --pso-w 0.6 --pso-c1 2.5 --pso-c2 1.0  --woa-b 0.1\n"
         "  --abc-limit 40\n";
 }
 
@@ -175,6 +176,7 @@ int main(int argc, char** argv) {
         else if (a == "--no-csv")      no_csv = true;
         else if (a == "--delta")     { delta = std::stod(need("--delta")); delta_given = true; }
         else if (a == "--ga-k")        P.ga_k = std::stoi(need("--ga-k"));
+        else if (a == "--ga-tsr")      P.ga_tsr = std::stod(need("--ga-tsr"));
         else if (a == "--ga-pc")       P.ga_pc = std::stod(need("--ga-pc"));
         else if (a == "--ga-pm")       P.ga_pm = std::stod(need("--ga-pm"));
         else if (a == "--de-cr")       P.de_cr = std::stod(need("--de-cr"));
@@ -198,8 +200,10 @@ int main(int argc, char** argv) {
         throw std::out_of_range("trial range exceeds uint64_t");
     if (delta_given && (!std::isfinite(delta) || delta < 0.0))
         throw std::invalid_argument("--delta must be finite and nonnegative");
-    if (P.ga_k <= 0 || P.ts_tabu_size < 0 || P.abc_limit < 0)
+    if (P.ga_k < 0 || P.ts_tabu_size < 0 || P.abc_limit < 0)
         throw std::invalid_argument("invalid algorithm count/window parameter");
+    if (!std::isfinite(P.ga_tsr) || P.ga_tsr <= 0.0 || P.ga_tsr > 1.0)
+        throw std::invalid_argument("--ga-tsr must be in (0,1]");
     auto probability = [](double value) { return std::isfinite(value) && value >= 0.0 && value <= 1.0; };
     if (!probability(P.ga_pc) || !probability(P.ga_pm) || !probability(P.de_cr))
         throw std::invalid_argument("GA probabilities and DE crossover probability must be in [0,1]");
@@ -238,7 +242,7 @@ int main(int argc, char** argv) {
     }
     Algo algo;
     if (!algo_from_id(algo_id, algo)) { std::cerr << "Error: algorithm id must be 1..9\n"; return 1; }
-    if (algo == Algo::GA && P.ga_k > P.num_neighbors)
+    if (algo == Algo::GA && P.ga_tournament_size() > P.num_neighbors)
         throw std::invalid_argument("GA requires --ga-k <= --neighbors");
     if (algo == Algo::DE && P.num_neighbors < 4)
         throw std::invalid_argument("DE requires at least 4 neighbors");

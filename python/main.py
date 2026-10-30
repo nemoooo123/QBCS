@@ -54,7 +54,7 @@ def main():
     print(f"\nTarget Truth Table: {target_output}")
 
     # Experimental Configuration
-    num_experiments = 30
+    num_experiments = 100
     max_iterations = 10000
     num_neighbors = 50  # Population size (N)
 
@@ -117,7 +117,7 @@ def main():
                 qindividuals4 = qindividuals4,
                 fitness_history_matrix = fitness_history_matrix,
                 target_output = target_output,
-                delta_theta = 0.005
+                delta_theta = 0.01
             )
 
         elif algo_choice == 2: # QTS (Quantum-Inspired Tabu Search)
@@ -195,7 +195,7 @@ def main():
                 pop_matrix4 = pop_matrix4,
                 fitness_history_matrix = fitness_history_matrix,
                 target_output = target_output,
-                k=5,
+                k=max(1, int(0.5 * num_neighbors)), # tournament size = TSR (0.5) x N
                 pc=0.9, # crossover
                 pm=0.001 # mutation
 

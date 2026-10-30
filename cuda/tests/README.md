@@ -4,11 +4,11 @@ Testing provides three kinds of evidence: replay of original Python samples, ite
 
 ## 1. Original C++ vs. New Executable: Full Iteration History Comparison
 
-First build the original C++ project as a separate executable, keeping its source unmodified. Then, from the `cuda` directory:
+First build the C++ version in `../cpp` (see its README); it serves as the baseline. Then, from the `cuda` directory:
 
 ```bash
 python3 tests/regression.py \
-  --baseline /absolute/path/to/original/qbcs \
+  --baseline ../cpp/build/qbcs \
   --candidate build/qbcs_cuda \
   --backends cpu,emulated \
   --work-dir regression_cpu_emulated
@@ -37,7 +37,7 @@ Each comparison checks the full CSV, including every generation of every trial a
 
 ```bash
 python3 tests/regression.py \
-  --baseline /absolute/path/to/original/qbcs \
+  --baseline ../cpp/build/qbcs \
   --candidate build/qbcs_cuda \
   --backends cuda \
   --gpu-decodes thread,warp \
@@ -48,7 +48,7 @@ A failed CUDA run reports an error; the test never falls back to the CPU. `--sui
 
 ```bash
 python3 tests/regression.py \
-  --baseline /absolute/path/to/original/qbcs \
+  --baseline ../cpp/build/qbcs \
   --candidate build/qbcs_cuda \
   --backends cuda --gpu-batch 1 --suite smoke \
   --work-dir regression_cuda_batch1
@@ -60,7 +60,7 @@ python3 tests/regression.py \
 
 ```bash
 python3 tests/shard_regression.py \
-  --baseline /absolute/path/to/original/qbcs \
+  --baseline ../cpp/build/qbcs \
   --candidate build/qbcs_cuda --backend emulated --gpu-decode thread \
   --work-dir regression_shards
 ```
@@ -97,7 +97,7 @@ python3 tools/benchmark.py --binary build/qbcs_cuda \
   --gpu-decodes thread,warp --out benchmark_13bit
 ```
 
-You can also add `--baseline /path/to/original/qbcs` to time the original C++ directly. Without it, the new version's `--backend cpu` is the baseline. Custom problems can use `--tt`, `--tt-file`, or `--tt-sparse`; the units of `--delta` still follow each algorithm's original definition.
+You can also add `--baseline ../cpp/build/qbcs` to time the original C++ directly. Without it, the new version's `--backend cpu` is the baseline. Custom problems can use `--tt`, `--tt-file`, or `--tt-sparse`; the units of `--delta` still follow each algorithm's original definition.
 
 By default each setting runs 1 untimed warmup and then 3 measured runs, reporting the median, fastest, and slowest. Timing covers the whole process, including CUDA start-up, data preparation, computation, and output; warmups can warm caches, but every measured run still starts a new process. The benchmark does not enable `--verify` / `--check-gpu`, so per-circuit verification cost is not counted as normal algorithm run time; after each run it still **compares the full convergence history and the global best circuit exactly** against the CPU baseline, and stops immediately on any difference.
 

@@ -187,21 +187,27 @@ bool algo_from_id(int id, Algo& out);
 
 struct Params {
     int max_iterations = 10000;
-    int num_neighbors = 10;      // population size N
+    int num_neighbors = 50;      // population size N
     // AE-QTS / QTS / QEA
     double delta_theta_aeqts = 0.01;
     double delta_theta_qts = 0.01;
     double delta_theta_qea = 0.0005;
     // GA
-    int ga_k = 5; double ga_pc = 0.8; double ga_pm = 0.005;
+    // Tournament size = floor(ga_tsr * N) (TSR = tournament selection rate), unless ga_k > 0.
+    double ga_tsr = 0.5; int ga_k = 0; double ga_pc = 0.9; double ga_pm = 0.001;
+    int ga_tournament_size() const {
+        if (ga_k > 0) return ga_k;
+        const int k = static_cast<int>(ga_tsr * num_neighbors);
+        return k < 1 ? 1 : k;
+    }
     // DE
-    double de_cr = 0.01;
+    double de_cr = 0.3;
     // TS
-    int ts_tabu_size = 45;
+    int ts_tabu_size = 150;
     // PSO
-    double pso_w = 0.6, pso_c1 = 3.0, pso_c2 = 1.0;
+    double pso_w = 0.6, pso_c1 = 2.5, pso_c2 = 1.0;
     // WOA
-    double woa_b = 0.45, woa_a_start = 2.0, woa_a_end = 0.0, woa_a_decay_power = 1.0;
+    double woa_b = 0.1, woa_a_start = 2.0, woa_a_end = 0.0, woa_a_decay_power = 1.0;
     // ABC
     int abc_limit = 40;
     // Debug: verify every synthesized circuit against the truth table.

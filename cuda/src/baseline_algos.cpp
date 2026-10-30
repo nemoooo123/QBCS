@@ -72,10 +72,11 @@ RunResult run_ga(const Encoding& E, const Params& P, Rng& rng, const std::vector
     int best = fit[argmin(fit)];
     Sample best_sample = pop[argmin(fit)];
 
+    const int K = P.ga_tournament_size();
     auto tournament = [&]() {
-        rng.sample_indices(N, P.ga_k, tour);
+        rng.sample_indices(N, K, tour);
         int b = tour[0];
-        for (int j = 1; j < P.ga_k; ++j)
+        for (int j = 1; j < K; ++j)
             if (fit[tour[j]] < fit[b]) b = tour[j];  // min(): first minimal element
         return b;
     };

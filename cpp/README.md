@@ -2,7 +2,7 @@
 
 This is a C++17 port of the Python implementation in [`../python`](../python). Its features and command-line interface follow the original `main.py`.
 All nine algorithms (AE-QTS, QTS, QEA, GA, DE, TS, PSO, WOA, ABC) are ported.
-It is about 120–180× faster than Python on a single thread, and can also run trials in parallel with multiple threads.
+It is about 120–180× faster than Python on a single thread (measured with N = 10, see below), and can also run trials in parallel with multiple threads.
 
 ## File Mapping
 
@@ -60,7 +60,7 @@ In our measurements `-O3` was no faster than `-O2`, and `-march=native` was slig
 Same as `main.py`: `qbcs [num_bits] [problem_idx] [algo_id]`. If the positional arguments are omitted, the program prompts for them like Python does.
 
 ```bash
-./qbcs 5 1 1                                   # 5-bit problem 1, AE-QTS, 100 trials × 10000 generations
+./qbcs 5 1 1                                   # 5-bit problem 1, AE-QTS, 100 trials × 10000 generations, N = 50
 ./qbcs 13 2 1 --threads 16 --seed 2026         # 16 threads; a fixed seed makes results reproducible
 ./qbcs 8 3 4 --experiments 30 --iterations 2000
 ./qbcs 1 --tt "1,0,3,2,5,7,4,6"                # custom truth table (the first positional argument is algo_id)
@@ -76,13 +76,13 @@ Main options (defaults = `main.py`):
 |---|---|---|
 | `--experiments N` | 100 | Number of trials |
 | `--iterations N` | 10000 | Generations per trial |
-| `--neighbors N` | 10 | Population / neighborhood size N |
+| `--neighbors N` | 50 | Population / neighborhood size N |
 | `--threads N` | all cores | Number of trials run in parallel; **results depend only on `--seed`, not on the thread count** |
 | `--seed S` | time-based | Base random seed (each trial's seed is hashed from the seed and the trial number) |
 | `--data FILE` | `data/problems.txt` | Problem library file |
 | `--out DIR` | `exp` | Output root directory |
 | `--verify` | off | Debugging: simulates every circuit and compares it with the truth table; the failure count is included in the report |
-| `--delta`, `--ga-k/--ga-pc/--ga-pm`, `--de-cr`, `--tabu`, `--pso-w/-c1/-c2`, `--woa-b`, `--abc-limit` | same as Python | Algorithm parameters |
+| `--delta`, `--ga-tsr/--ga-pc/--ga-pm`, `--de-cr`, `--tabu`, `--pso-w/-c1/-c2`, `--woa-b`, `--abc-limit` | same as Python | Algorithm parameters (see the parameter table in the [main README](../README.md)); `--ga-k K` sets the GA tournament size directly instead of TSR × N |
 
 ### Output
 
@@ -133,7 +133,9 @@ the other seven were also within statistical error.
 | 10-bit | 716 ms/gen | 3.9 ms/gen | ~180× |
 | 13-bit | (estimated ~8 s/gen) | 47 ms/gen | ~170× |
 
-A full 13-bit experiment (100 trials × 10000 generations) takes about 13 hours on one thread and about 1 hour on 16 threads.
+A full 13-bit experiment (100 trials × 10000 generations, N = 10) takes about 13 hours on one thread and about 1 hour on 16 threads.
+
+All figures in this section were measured with N = 10; the current default is N = 50.
 
 ## Intentional Differences from the Python Version
 
@@ -147,10 +149,6 @@ A full 13-bit experiment (100 trials × 10000 generations) takes about 13 hours 
 5. Python's no-op operations on the `999` marker (TS flipping Layer 4's `[0]`, GA/WOA/ABC mutating markers) are no-ops in C++ as well,
    but the probability of selecting a marker is preserved, so the distribution of search behavior is unchanged.
 6. Multithreading: each trial's seed = hash(`--seed`, trial number), so the same `--seed` gives the same results with any `--threads`.
-
-## Batch Scripts
-
-`run_all_3bit_delta005.sh`, `run_all_3bit_delta005_1000t.sh`, and `run_all_3bit_ga_ts.sh` run AE-QTS, GA, and TS over all 40,320 3-bit permutations in `data/problems_3bit_all.txt`. They use `./build/qbcs` by default; set `QBCS_EXE` to use another executable, e.g. `QBCS_EXE=./qbcs.exe bash run_all_3bit_ga_ts.sh`.
 
 ## License
 

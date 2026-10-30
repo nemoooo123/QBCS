@@ -73,7 +73,7 @@ A smaller batch capacity only changes how execution is split; it does not change
 
 ## 5. Current Performance Limits and Measurement Method
 
-In one instrumented 13-bit AE-QTS profile of the original C++, about 58.4% of sampled CPU time was attributed to synthesis, 26.3% to sampling / repair, and 15.2% to updates. The grouping and the full original log are in `validation/original_cpu_profile.txt`, including limitations such as compiler inlining / gprof attribution.
+In one instrumented 13-bit AE-QTS profile of the original C++, about 58.4% of sampled CPU time was attributed to synthesis, 26.3% to sampling / repair, and 15.2% to updates. These figures are subject to profiling limitations such as compiler inlining and gprof attribution.
 
 If this profile is treated as a simplified single-trial model, assuming the original sampling / update cost is completely fixed, GPU synthesis is instantaneous, and there is no transfer overhead, Amdahl's estimate gives an upper bound of about `1 / (1−0.584) ≈ 2.40`. This only illustrates the remaining CPU cost; it is neither a promise of actual speedup nor a strict upper bound: overlap across trials, different n / N / generations, CPU saturation, data transfer, and profiling instrumentation all change the ratios.
 
@@ -83,6 +83,6 @@ This version provides per-batch H2D+clear / decode / reduce / D2H event timing, 
 
 ## 6. Reference Files and Reproducibility
 
-`reference_cpp/` is a copy of the original C++ source (with the extra variants, IDs 10–13, removed to match this project); `validation/source_manifest.json` records the hashes of the original archives and reference files before that change. `src/synth.cpp` still serves as the original full-circuit reference. The changes to the search drivers mainly split independent evaluate calls into sampling and batched evaluation; DE uses a trial population buffer to defer acceptance, but all candidates are still generated from the same original population.
+The C++ version in `../cpp` is the reference implementation for comparison. `src/synth.cpp` still serves as the original full-circuit reference. The changes to the search drivers mainly split independent evaluate calls into sampling and batched evaluation; DE uses a trial population buffer to defer acceptance, but all candidates are still generated from the same original population.
 
 The verified results should be labeled separately: source replay, CPU production driver comparison, shared-core host execution, service concurrency, and NVCC compilation. This evidence supports the ported logic and its buildability; actual GPU execution and performance still need GPU regression / Compute Sanitizer / benchmark runs.

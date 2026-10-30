@@ -20,7 +20,7 @@ This framework was first implemented in **Python**. To **improve execution speed
 | Folder | Language | Description |
 | :--- | :--- | :--- |
 | [`python/`](python/) | Python 3 | Original research implementation |
-| [`cpp/`](cpp/) | C++17 | About 120–180× faster than Python on a single thread; runs independent trials in parallel on multiple CPU threads |
+| [`cpp/`](cpp/) | C++17 | About 120–180× faster than Python on a single thread (measured with N = 10); runs independent trials in parallel on multiple CPU threads |
 | [`cuda/`](cuda/) | C++17 + CUDA | The search runs on the CPU, while circuit synthesis and fitness evaluation run in batches on an NVIDIA GPU; intended for problems of 13 qubits and above |
 
 With the same `--seed`, the C++ and CUDA versions produce identical results. The Python version uses a different random number generator, so its results agree with the C++ version statistically but not run for run.
@@ -206,9 +206,27 @@ All three versions use the same algorithm IDs:
 
 9: Artificial Bee Colony Algorithm (ABC)
 
+### Algorithm Parameters
+
+All versions use population size N = 50, 100 independent trials, and 10,000 generations per trial by default, with the following algorithm parameters:
+
+| Algorithm | Parameters | C++ / CUDA option |
+| :--- | :--- | :--- |
+| AE-QTS | ∆θ = 0.01 | `--delta` |
+| QTS | ∆θ = 0.01 | `--delta` |
+| QEA | ∆θ = 0.0005 | `--delta` |
+| GA | TSR = 0.5 (tournament size = TSR × N), CR = 0.9, MR = 0.001 | `--ga-tsr`, `--ga-pc`, `--ga-pm` |
+| DE | CR = 0.3 | `--de-cr` |
+| TS | tabu list = 150 | `--tabu` |
+| PSO | w = 0.6, c₁ = 2.5, c₂ = 1 | `--pso-w`, `--pso-c1`, `--pso-c2` |
+| WOA | a = 2 (decreasing linearly to 0), b = 0.1 | `--woa-b` |
+| ABC | limit = 40 | `--abc-limit` |
+
+In the C++ and CUDA versions, N, the number of trials, and the generations can be changed with `--neighbors`, `--experiments`, and `--iterations`.
+
 ### Python Version
 
-Python: v3.10 or higher (Tested on v3.13).
+Python: v3.11 or higher (Tested on v3.14.3).
 
 Dependencies:
 
@@ -252,7 +270,7 @@ Main options (defaults match the Python version):
 | :--- | :--- | :--- |
 | `--experiments N` | 100 | Number of independent trials |
 | `--iterations N` | 10000 | Generations per trial |
-| `--neighbors N` | 10 | Population / neighborhood size |
+| `--neighbors N` | 50 | Population / neighborhood size |
 | `--threads N` | all cores | Trials run in parallel; results depend only on `--seed` |
 | `--seed S` | time-based | Base random seed, for reproducible results |
 | `--out DIR` | `exp` | Output directory |
@@ -261,6 +279,8 @@ Main options (defaults match the Python version):
 See [`cpp/README.md`](cpp/README.md) for all options.
 
 ### CUDA Version (Deployment)
+
+The CUDA version has been deployed on NVIDIA RTX 4090, RTX 5060, RTX 5080, and RTX 5090 GPUs.
 
 #### 1. Requirements
 
@@ -286,7 +306,7 @@ Set `CMAKE_CUDA_ARCHITECTURES` to match your GPU:
 | :--- | :--- |
 | RTX 30 series (e.g. 3080, 3090) | `86` |
 | RTX 40 series (e.g. 4080, 4090) | `89` |
-| RTX 50 series (e.g. 5080, 5090) | `120` |
+| RTX 50 series (e.g. 5060, 5080, 5090) | `120` |
 
 For other GPUs, see [NVIDIA CUDA GPUs](https://developer.nvidia.com/cuda/gpus).
 
@@ -359,11 +379,15 @@ exp/
 The Python version writes `.txt` in UTF-16 and `.xlsx`. The C++ and CUDA versions write `.txt` in UTF-8 and `.csv` with the same layout as the `.xlsx`; `tools/csv_to_xlsx.py` converts a whole output directory to `.xlsx`.
 
 ## 📊 Data Analysis
-This project includes automated plotting scripts that read experimental data from the ```exp/``` folder and generate high-quality PDF vector graphics for publication.
+This project includes an automated plotting script, `python/plot_results.py`, that reads experimental data from the ```exp/``` folder and generates high-quality PDF vector graphics for publication. It reads the output of all three versions (`.txt` summaries plus the `.xlsx` or `.csv` convergence data).
 
 ```Bash
-# Run the plotting script
+# Run the plotting script (reads ./exp by default)
+cd python
 python plot_results.py
+
+# Or point it at another results folder, e.g. the C++ output
+python plot_results.py ../cpp/exp
 ```
 Generated charts are saved in the ```Comparison_PDF_Plots/``` directory.
 

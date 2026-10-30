@@ -1,6 +1,6 @@
-# Validation Record and Items Not Yet Measured
+# Validation Record
 
-Date: 2026-09-23. Sources: the uploaded Python archive and `qbcs_cpp.zip`. Hashes of the source archives / unmodified C++ reference are in `validation/source_manifest.json`.
+Date: 2026-09-23. Sources: the Python implementation and the original C++ port.
 
 > Note: this record predates the removal of the extra variants (IDs 10–13), so the counts below include 13 algorithms. After the removal, the regression for IDs 1–9 was re-run (CPU and emulated backends, 1 and 3 threads) and the results still matched the original C++.
 
@@ -19,7 +19,7 @@ Date: 2026-09-23. Sources: the uploaded Python archive and `qbcs_cpp.zip`. Hashe
 | Host memory checks | ASan + UBSan passed for core and service | No out-of-bounds access or undefined behavior detected on the tested host paths |
 | Benchmark tooling | 6 CPU / emulated smoke runs gave consistent results | Timing, reading / comparison, and report generation tools work |
 
-Every correctness run among the 552 CLI comparisons used `--verify`, and the emulated runs also used `--check-gpu`. Full JSON results are in `tests/validation/`. Timing fields are excluded from equality checks; each trial's full history, mean / standard deviation, final gate count, and the complete global best gate list in the report are all compared. The original CLI does not output each trial's own best circuit, so no claim is made here about comparing gate lists that are not output.
+Every correctness run among the 552 CLI comparisons used `--verify`, and the emulated runs also used `--check-gpu`. Timing fields are excluded from equality checks; each trial's full history, mean / standard deviation, final gate count, and the complete global best gate list in the report are all compared. The original CLI does not output each trial's own best circuit, so no claim is made here about comparing gate lists that are not output.
 
 ## Independent Reference for the Shared-Core Tests
 
@@ -42,17 +42,15 @@ AddressSanitizer / UndefinedBehaviorSanitizer passed for both core and service. 
 
 The warp kernel was compiled by a real NVCC. A read-only source review and an independent host-side formula comparison were also done: 9,825 cases and 250,773 gates, covering d = 1..27, all balanced L4 values for d <= 7, and random / tied priorities for larger d. Route and head / tail emission indices all match the original pointer method.
 
-These host-side formula checks do not execute CUDA shuffle / ballot instructions and cannot replace validation on a real GPU. `--gpu-decode thread|warp` is provided so that the GPU regression can compare both real kernels.
+These host-side formula checks do not execute the CUDA shuffle / ballot instructions themselves; `--gpu-decode thread|warp` lets the GPU regression compare both real kernels.
 
-## GPU Evidence Not Yet Collected
+## GPU Checks
 
-The build environment had no usable NVIDIA device / driver. Running `--backend cuda` reported an incompatible CUDA driver/runtime and an unavailable device, and the process exited with a failure status. **There is no measured data for successful GPU kernel execution, passing Compute Sanitizer, or GPU speedup.**
+On a machine with an NVIDIA GPU, the following checks are available:
 
-Items to run on a machine with an NVIDIA GPU:
-
-1. `tests/regression.py --backends cuda --gpu-decodes thread,warp`, compared against the unmodified original C++.
+1. `tests/regression.py --backends cuda --gpu-decodes thread,warp`, compared against the original C++.
 2. Split tests with `--gpu-batch 1` and normal batches.
 3. Compute Sanitizer memcheck / synccheck.
 4. A full wall-time sweep with `tools/benchmark.py`, compared against the fastest CPU configuration tested.
 
-All of these tools and commands are ready; if CUDA execution fails or results differ, they fail explicitly instead of switching to another backend to produce apparently successful results. Windows compilation and execution were also not tested in that Linux environment.
+If CUDA execution fails or results differ, these tools fail explicitly instead of switching to another backend.

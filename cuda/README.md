@@ -2,11 +2,11 @@
 
 This project is a rewrite of the Python / C++ quantum Boolean circuit synthesis programs, using an architecture in which **C++ controls the search and CUDA performs batched synthesis and fitness evaluation**. It keeps the original C++ version's 9 algorithms (ID 1–9; the original C++ variants with IDs 10–13 have been removed), four-layer encoding, RNG, Layer 4 repair, ranking, and update order. The added parallelism applies only to mutually independent candidate solutions and independent trials.
 
-**Status: compilation and linking with NVCC 13.0.88 / `sm_120` have passed, and the equivalence checks on the CPU have passed. No NVIDIA GPU was available in the build environment, so the CUDA kernels' correctness on real hardware, Compute Sanitizer checks, and the speedup have not yet been measured.** Detailed evidence is in `validation/`, `tests/validation/`, and `docs/VALIDATION.md`. If CUDA is unavailable at run time the program reports an error; use `--backend cpu` to select the CPU explicitly.
+This version has been deployed on NVIDIA RTX 4090, RTX 5060, RTX 5080, and RTX 5090 GPUs. Validation details are in `docs/VALIDATION.md`. If CUDA is unavailable at run time the program reports an error; use `--backend cpu` to select the CPU explicitly.
 
 ## 1. Quick Start
 
-Requires a C++17 compiler, CMake 3.24 or later, and the NVIDIA CUDA Toolkit. RTX 5090 / 5080 have compute capability 12.0, so the build argument is `120`; CUDA Toolkit 12.8 or later and a compatible driver are recommended. The build was tested with CUDA 13.0.88. GPU architectures are listed in the [NVIDIA GPU capability table](https://developer.nvidia.com/cuda/gpus); for Toolkit architecture support see the [NVIDIA CUDA 12.8 release notes](https://docs.nvidia.com/cuda/archive/12.8.0/cuda-toolkit-release-notes/index.html).
+Requires a C++17 compiler, CMake 3.24 or later, and the NVIDIA CUDA Toolkit. RTX 5060 / 5080 / 5090 have compute capability 12.0, so the build argument is `120`; CUDA Toolkit 12.8 or later and a compatible driver are recommended. The build was tested with CUDA 13.0.88. GPU architectures are listed in the [NVIDIA GPU capability table](https://developer.nvidia.com/cuda/gpus); for Toolkit architecture support see the [NVIDIA CUDA 12.8 release notes](https://docs.nvidia.com/cuda/archive/12.8.0/cuda-toolkit-release-notes/index.html).
 
 ### Windows: Visual Studio 2022 x64 Developer Command Prompt / PowerShell
 
@@ -21,13 +21,13 @@ ctest --test-dir build -C Release --output-on-failure
 First run a small problem, comparing every GPU fitness value with the original CPU synthesizer and checking the truth table:
 
 ```powershell
-.\build\Release\qbcs_cuda.exe 5 1 1 --backend cuda --experiments 3 --iterations 20 --neighbors 10 --threads 3 --seed 2026 --check-gpu --verify --out exp_check
+.\build\Release\qbcs_cuda.exe 5 1 1 --backend cuda --experiments 3 --iterations 20 --neighbors 50 --threads 3 --seed 2026 --check-gpu --verify --out exp_check
 ```
 
 Starting settings for real runs:
 
 ```powershell
-.\build\Release\qbcs_cuda.exe 13 1 1 --backend cuda --experiments 32 --iterations 200 --neighbors 10 --threads 8 --gpu-batch 128 --seed 2026 --out exp_cuda
+.\build\Release\qbcs_cuda.exe 13 1 1 --backend cuda --experiments 32 --iterations 200 --neighbors 50 --threads 8 --gpu-batch 128 --seed 2026 --out exp_cuda
 ```
 
 These are starting settings for measurement. Set `--experiments`, `--iterations`, `--neighbors`, and `--delta` according to your experiment specification; the program adds no extra stopping criteria and does not change the search space.
@@ -38,10 +38,10 @@ These are starting settings for measurement. Set `--experiments`, `--iterations`
 cmake -S . -B build -DQBCS_ENABLE_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=120 -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
-./build/qbcs_cuda 5 1 1 --backend cuda --experiments 3 --iterations 20 --neighbors 10 --threads 3 --seed 2026 --check-gpu --verify --out exp_check
+./build/qbcs_cuda 5 1 1 --backend cuda --experiments 3 --iterations 20 --neighbors 50 --threads 3 --seed 2026 --check-gpu --verify --out exp_check
 ```
 
-`ctest` runs CPU tests of the shared core and the scheduling service; only the CUDA run command above actually launches the GPU. The executable path differs between Windows and Linux; all other CLI arguments are the same. The Windows build has not yet been tested in our environment.
+`ctest` runs CPU tests of the shared core and the scheduling service; only the CUDA run command above actually launches the GPU. The executable path differs between Windows and Linux; all other CLI arguments are the same.
 
 For other GPUs, set `CMAKE_CUDA_ARCHITECTURES` to their compute capability, e.g. `89` for an RTX 4090. If it is not set, the project defaults to SASS and PTX for `86`; for PTX compatibility see the [NVIDIA Blackwell compatibility guide](https://docs.nvidia.com/cuda/blackwell-compatibility-guide/index.html).
 
@@ -137,10 +137,10 @@ These come from the allocation formula; they are not measured GPU usage or run t
 
 ## 5. Per-Generation Verification on Real Hardware
 
-`reference_cpp/` contains the original C++ sources (identical to `../cpp/src`). It is the baseline for per-generation comparison and can be built on its own. From the `cuda` directory:
+The C++ version in [`../cpp`](../cpp) is the baseline for per-generation comparison. From the `cuda` directory:
 
 ```bash
-cmake -S reference_cpp -B build-reference -DCMAKE_BUILD_TYPE=Release
+cmake -S ../cpp -B build-reference -DCMAKE_BUILD_TYPE=Release
 cmake --build build-reference --config Release --parallel
 python3 tests/regression.py --baseline build-reference/qbcs --candidate build/qbcs_cuda --backends cuda --gpu-decodes thread,warp --work-dir regression_cuda
 ```
@@ -149,7 +149,7 @@ On Windows, change the two executable paths to `build-reference/Release/qbcs.exe
 
 The full regression covers all 9 algorithms, odd and even N, delta edge cases, identity, distance-1 steps, different thread counts, and splitting across batches. Each comparison checks every trial's full history, each trial's best gate count, and the complete gate list of the global best circuit; timing fields are excluded. See `tests/README.md` for details.
 
-Small problems can additionally be checked with Compute Sanitizer on a GPU. The following commands have not yet been run in our environment:
+Small problems can additionally be checked with Compute Sanitizer on a GPU:
 
 ```bash
 compute-sanitizer --tool memcheck --error-exitcode 1 ./build/qbcs_cuda 5 1 1 --backend cuda --gpu-decode thread --experiments 3 --iterations 5 --threads 3 --seed 2026 --check-gpu --verify --out sanitizer_thread
@@ -162,14 +162,14 @@ compute-sanitizer --tool synccheck --error-exitcode 1 ./build/qbcs_cuda 5 1 1 --
 After the GPU correctness checks pass, run:
 
 ```bash
-python3 tools/benchmark.py --binary build/qbcs_cuda --baseline build-reference/qbcs --bits 13 --problem 1 --algorithm 1 --experiments 32 --iterations 200 --neighbors 10 --threads 1,4,8,16 --gpu-batches 32,128,512 --gpu-decodes thread,warp --out benchmark_13bit
+python3 tools/benchmark.py --binary build/qbcs_cuda --baseline build-reference/qbcs --bits 13 --problem 1 --algorithm 1 --experiments 32 --iterations 200 --neighbors 50 --threads 1,4,8,16 --gpu-batches 32,128,512 --gpu-decodes thread,warp --out benchmark_13bit
 ```
 
 Each configuration is warmed up and then timed over 3 full process runs, reporting the median wall time. Every run is compared against the full result for the same seed, and speedups are listed only after the comparison passes, against both the CPU at the same thread count and the fastest CPU setting tested. Outputs are `benchmark_summary.csv`, `benchmark.json`, and the full run logs. Use a new folder for `--out`.
 
 For a first pass, narrow it to `--threads 4,8 --gpu-batches 32,128 --repeats 1 --warmups 0`, then repeat formal measurements around the better region. The GPU summary lists actual batch sizes and per-stage times for H2D+clear / decode / reduce / D2H, which helps identify the next bottleneck.
 
-In an instrumented 13-bit AE-QTS profile of the original C++, synthesis took about 58.4% of sampled CPU time, sampling / repair about 26.3%, and updates about 15.2%. This shows that keeping sampling and updates on the CPU leaves a significant cost; the real speedup of this version needs full wall-time measurement. Do not convert CUDA core counts, compiler register statistics, or emulated test times into speedup figures. The full profile and its limitations are in `validation/original_cpu_profile.txt`.
+In an instrumented 13-bit AE-QTS profile of the original C++, synthesis took about 58.4% of sampled CPU time, sampling / repair about 26.3%, and updates about 15.2%. This shows that keeping sampling and updates on the CPU leaves a significant cost, so measure speedups with full wall time rather than estimating them from CUDA core counts, compiler register statistics, or emulated test times.
 
 ## 7. Multiple GPUs / Multiple Machines
 
@@ -195,10 +195,8 @@ These three processes can be started simultaneously in different terminals. On d
 | `src/evaluation.*` | Multi-trial batch queue, splitting, result delivery, and error propagation |
 | `src/quantum_algos.cpp`, `src/baseline_algos.cpp` | Original search logic with safe batch boundaries |
 | `src/synth.cpp` | Original CPU synthesizer / final best-circuit output / verification reference |
-| `reference_cpp/` | Original C++ source (identical to `../cpp/src`), the regression baseline |
 | `tests/` | Shared core, scheduling, per-generation comparison, Python replay, and sharding tests |
 | `tools/benchmark.py` | CPU / CUDA configuration sweep with exact result comparison and full wall time |
 | `docs/` | Design derivation, differences between the source versions, validation evidence |
-| `validation/`, `tests/validation/` | Build logs, CPU profiling, reference hashes, and test reports |
 
 License: the original `LICENCE` (MIT), 2026 Wei-Chieh Lai and Kuo-Chun Tseng, ASC Lab, National Ilan University; see [`../LICENCE`](../LICENCE).
