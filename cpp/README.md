@@ -152,4 +152,4 @@ All figures in this section were measured with N = 10; the current default is N 
 
 ## License
 
-MIT, same as the original project (original authors: Wei-Chieh Lai, Prof. Kuo-Chun Tseng, ASC Lab, National Ilan University).
+MIT; see [`../LICENCE`](../LICENCE). Authors: Kuo-Chun Tseng, Wei-Chieh Lai, Hong-Sheng Wang, Yan-Ting Wu, and Chih-Yu Tsao, ASC Lab, National Ilan University.

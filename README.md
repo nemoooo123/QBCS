@@ -408,17 +408,16 @@ If you add new truth tables or bit-widths, update the `tasks` dictionary in `plo
 
 ## 📜 Copyright & Authorship
 
-This project was developed by Wei-Chieh Lai under the supervision of Prof. Kuo-Chun Tseng at Advanced System Circuit Lab (ASC Lab), National Ilan University.
+This project was developed at Advanced System Circuit Lab (ASC Lab), National Ilan University.
 
-* **Author:** Wei-Chieh Lai
-
-* **Supervisor:** Prof. Kuo-Chun Tseng
+* **Authors:** Kuo-Chun Tseng, Wei-Chieh Lai, Hong-Sheng Wang, Yan-Ting Wu, and Chih-Yu Tsao
 
 * **Affiliation:** ASC Lab, Department of Computer Science and Information Engineering, National Ilan University
 
-* **Copyright:** © 2026 Wei-Chieh Lai and Prof. Kuo-Chun Tseng, ASC Lab, National Ilan University.
+* **Copyright:** © 2026 Kuo-Chun Tseng, Wei-Chieh Lai, Hong-Sheng Wang, Yan-Ting Wu, and Chih-Yu Tsao, ASC Lab, National Ilan University.
 
 * **License:** This project is licensed under the MIT License.
+
 ## 📬 Contact
 For inquiries regarding algorithm implementation, problem formats, or academic collaboration, please contact:
 

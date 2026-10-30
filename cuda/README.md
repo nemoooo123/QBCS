@@ -199,4 +199,4 @@ These three processes can be started simultaneously in different terminals. On d
 | `tools/benchmark.py` | CPU / CUDA configuration sweep with exact result comparison and full wall time |
 | `docs/` | Design derivation, differences between the source versions, validation evidence |
 
-License: the original `LICENCE` (MIT), 2026 Wei-Chieh Lai and Kuo-Chun Tseng, ASC Lab, National Ilan University; see [`../LICENCE`](../LICENCE).
+License: MIT; see [`../LICENCE`](../LICENCE). Authors: Kuo-Chun Tseng, Wei-Chieh Lai, Hong-Sheng Wang, Yan-Ting Wu, and Chih-Yu Tsao, ASC Lab, National Ilan University.
