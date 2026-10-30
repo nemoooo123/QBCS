@@ -643,7 +643,7 @@ class _MRAccumulator:
     reduced circuit as the old fixed-point loop (trace-rewriting with an independence
     relation has a confluent, order-independent normal form), but does it in a single
     amortized O(1) step per gate. Ported from an independently-implemented, verified-fast
-    reference (學弟's `_MRAccumulator` in stepwise_encoding.py) into this codebase's
+    reference (a junior labmate's `_MRAccumulator` in stepwise_encoding.py) into this codebase's
     gate representation (length-num_bits 0/1/3 lists, plus a target-bit-shift and a
     control-pattern integer per gate, as already used elsewhere in this module).
     """
