@@ -1,0 +1,22 @@
+[
+  {
+    "trace": "/workspace/scratch/4eb7a8e44724/audit_scratch/trace_3_aeqts.txt",
+    "status": "passed",
+    "output": "REPLAY OK: aeqts n=3 idx=1 iters=100 | circuits identical: 1000 (18440 gates), all realize the truth table | probability layers identical after every update"
+  },
+  {
+    "trace": "/workspace/scratch/4eb7a8e44724/audit_scratch/trace_5_qts.txt",
+    "status": "passed",
+    "output": "REPLAY OK: qts n=5 idx=1 iters=30 | circuits identical: 300 (37250 gates), all realize the truth table | probability layers identical after every update"
+  },
+  {
+    "trace": "/workspace/scratch/4eb7a8e44724/audit_scratch/trace_5_qea.txt",
+    "status": "passed",
+    "output": "REPLAY OK: qea n=5 idx=1 iters=30 | circuits identical: 300 (37312 gates), all realize the truth table | probability layers identical after every update"
+  },
+  {
+    "trace": "/workspace/scratch/4eb7a8e44724/audit_scratch/trace_8_aeqts.txt",
+    "status": "passed",
+    "output": "REPLAY OK: aeqts n=8 idx=1 iters=3 | circuits identical: 30 (49838 gates), all realize the truth table | probability layers identical after every update"
+  }
+]

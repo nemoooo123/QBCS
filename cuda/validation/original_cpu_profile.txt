@@ -1,0 +1,615 @@
+ORIGINAL C++ CPU PROFILE (GNU gprof)
+====================================
+
+Purpose: identify the original C++ workload's CPU hotspots for the CUDA design.
+This is an instrumented, sampled CPU profile; it is NOT a GPU timing or a
+measurement of GPU speedup. No CUDA device was involved in this run.
+
+Workload
+--------
+13-bit problem 1 from the supplied original data/problems.txt
+AE-QTS (algorithm 1), 200 iterations, population 10, one independent experiment,
+one worker thread, seed 2026, no per-generation CSV, no verification simulation.
+Encoding: 7 cycles; L1/L2/L3/L4 sizes = 21 / 37 / 165256 / 89846 bits.
+Result: best gate count 96438.
+Reported experiment / wall duration: 8.05 seconds (instrumented executable).
+gprof sampled CPU duration: 7.19 seconds; sampling interval: 0.01 seconds.
+
+Environment
+-----------
+g++ (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0
+GNU gprof (GNU Binutils for Ubuntu) 2.42
+CPU reported by /proc/cpuinfo: AMD EPYC 9V74 80-Core Processor
+Shared execution environment; timings are not isolated hardware benchmarks.
+
+Grouped self-time observations (rounded; denominator = 7.19 sampled seconds)
+----------------------------------------------------------------------------
+Synthesis / moving-rule reduction: 4.20 s, approximately 58.4%
+  Synthesizer::emit_transposition: 3.96 s (55.08%)
+  Synthesizer::run, excluding callees: 0.24 s (3.34%)
+Sampling plus L4 repair: 1.89 s, approximately 26.3%
+  sample_individual: 0.97 s (13.49%)
+  Rng::sample_indices: 0.91 s (12.66%), attributed to L4 repair by call graph
+  repair_l4_all, excluding callees: 0.01 s (0.14%)
+AE-QTS probability update: 1.09 s, approximately 15.2%
+  rotate_best_vs_worst: 1.09 s (15.16%)
+Other sampled work: approximately 0.01 s (0.1%), circuit formatting.
+
+Interpretation and limits
+-------------------------
+The synthesis/evaluation path is the largest sampled CPU component for this
+specific problem, seed, population, and generation count. Sampling, repair, and
+probability updates together account for approximately 41.5% of sampled CPU time.
+Accelerating synthesis alone therefore leaves material CPU work; the profile
+cannot justify a claimed end-to-end GPU multiplier. GPU transfer, scheduling,
+kernel launch, concurrency, different workloads, and GPU hardware were not
+measured here. Retaining CPU sampling and updates supports reproducible original
+search behavior, with the expected corresponding cost.
+
+-pg changes execution cost. gprof reports sampled program counters and function
+call instrumentation; inlining and tail calls can affect function attribution
+and call counts. Use the grouped percentages as approximate hotspot evidence,
+not exact costs for an uninstrumented build. Sub-second components have limited
+sampling precision. This was a single profile, not a statistical benchmark.
+
+Reproduction
+------------
+From the unchanged original qbcs_cpp source directory:
+  g++ -std=c++17 -O2 -pg -pthread -I src src/main.cpp src/encoding.cpp src/synth.cpp src/algorithms_common.cpp src/quantum_algos.cpp src/baseline_algos.cpp src/data_loader.cpp -o /path/to/profile/qbcs_profile
+
+From a dedicated writable profile directory:
+  ./qbcs_profile 13 1 1 --iterations 200 --experiments 1 --neighbors 10 --threads 1 --seed 2026 --quiet --no-csv --data /path/to/original/qbcs_cpp/data/problems.txt --out results > run_stdout.txt 2> run_stderr.txt
+  gprof ./qbcs_profile ./gmon.out > profile_raw.txt
+
+Original input/source SHA-256
+----------------------------
+3098fc5dc4d1658752244e33445d81b416b1f235b59987eb1c2f56b392c848f5  src/main.cpp
+71b14e983a48febacfba36807702571797fa88d7fb2212d3969ea0ce35b43e8d  src/encoding.cpp
+abb8dfba4025694f9300668f533dc7252891bdf8b535852e5f8e0794420ffdfc  src/synth.cpp
+3dc5d68b1a71a49cbdc54f895d14e05cebebf17ce7400887cd9401f45b916cb6  src/algorithms_common.cpp
+b193864dfd9237d66b75e93b5f2dd8dc77bab18d86a379802f0c3c12dc4c383b  src/quantum_algos.cpp
+e82bbaed3e346ede7c8dfbf4af159e636b8a13fd0dc1a6f5a1433127a3fee8ce  src/baseline_algos.cpp
+becf10a9b75a6e2b80ade09c939238e58906f2557308e746907ff030dab7f5e8  src/data_loader.cpp
+b77413e786c63e29a0a033c7b9f5c654c217e5e30fa53cb0de4179552eed934d  src/qbcs.h
+b66206ddb249b1fc48457b14ac8a77b7d3afad8cc933b96c1be5b09e439b98eb  src/data_loader.h
+697885722ea1fb146b9b23fe09b39c9ab0f492a2c41dd92d561133a062b8c640  data/problems.txt
+
+Complete GNU gprof output (flat profile and call graph)
+======================================================
+
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls   s/call   s/call  name    
+ 55.08      3.96     3.96 16372182     0.00     0.00  qbcs::Synthesizer::emit_transposition(qbcs::Sample const&, int, int)
+ 15.16      5.05     1.09     1020     0.00     0.00  qbcs::rotate_best_vs_worst(qbcs::QLayers&, qbcs::Sample const&, qbcs::Sample const&, double)
+ 13.49      6.02     0.97     2000     0.00     0.00  qbcs::sample_individual(qbcs::Encoding const&, qbcs::QLayers const&, qbcs::Rng&, qbcs::Sample&)
+ 12.66      6.93     0.91 16368000     0.00     0.00  qbcs::Rng::sample_indices(int, int, std::vector<int, std::allocator<int> >&)
+  3.34      7.17     0.24     2001     0.00     0.00  qbcs::Synthesizer::run(qbcs::Sample const&)
+  0.14      7.18     0.01     2000     0.00     0.00  qbcs::repair_l4_all(qbcs::Encoding const&, std::vector<unsigned char, std::allocator<unsigned char> >&, qbcs::Rng&)
+  0.14      7.19     0.01        1     0.01     0.01  qbcs::circuit_to_python_str[abi:cxx11](std::vector<qbcs::Gate, std::allocator<qbcs::Gate> > const&, int)
+  0.00      7.19     0.00     8000     0.00     0.00  qbcs::Sample::layer(int) const
+  0.00      7.19     0.00     8000     0.00     0.00  std::vector<unsigned char, std::allocator<unsigned char> >::_M_fill_assign(unsigned long, unsigned char const&)
+  0.00      7.19     0.00     4002     0.00     0.00  void std::__insertion_sort<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>)
+  0.00      7.19     0.00     4002     0.00     0.00  void std::__merge_sort_with_buffer<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>)
+  0.00      7.19     0.00     4000     0.00     0.00  qbcs::QLayers::layer(int)
+  0.00      7.19     0.00     2001     0.00     0.00  void std::__merge_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>)
+  0.00      7.19     0.00     2001     0.00     0.00  void std::__stable_sort_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>)
+  0.00      7.19     0.00     2000     0.00     0.00  qbcs::Synthesizer::gate_count(qbcs::Sample const&)
+  0.00      7.19     0.00     2000     0.00     0.00  qbcs::Sample::resize(qbcs::Encoding const&)
+  0.00      7.19     0.00     2000     0.00     0.00  qbcs::evaluate(qbcs::Synthesizer&, qbcs::Sample const&, qbcs::Params const&, std::vector<int, std::allocator<int> > const&, long&)
+  0.00      7.19     0.00      803     0.00     0.00  void std::vector<int, std::allocator<int> >::_M_realloc_insert<int>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int&&)
+  0.00      7.19     0.00      400     0.00     0.00  void std::__insertion_sort<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>)
+  0.00      7.19     0.00      400     0.00     0.00  void std::__merge_sort_with_buffer<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>)
+  0.00      7.19     0.00      345     0.00     0.00  qbcs::Sample::Sample(qbcs::Sample const&)
+  0.00      7.19     0.00      200     0.00     0.00  qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)
+  0.00      7.19     0.00      200     0.00     0.00  void std::__merge_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>)
+  0.00      7.19     0.00      200     0.00     0.00  void std::__stable_sort_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>)
+  0.00      7.19     0.00       82     0.00     0.00  qbcs::DataLoader::parse_table(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::vector<int, std::allocator<int> >&, int&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&)
+  0.00      7.19     0.00       82     0.00     0.00  qbcs::is_permutation(std::vector<int, std::allocator<int> > const&, int&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&)
+  0.00      7.19     0.00       82     0.00     0.00  void std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::_M_realloc_insert<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >(__gnu_cxx::__normal_iterator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >*, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&)
+  0.00      7.19     0.00       74     0.00     0.00  bool std::operator==<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)
+  0.00      7.19     0.00       48     0.00     0.00  void std::vector<qbcs::Problem, std::allocator<qbcs::Problem> >::_M_realloc_insert<qbcs::Problem const&>(__gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, qbcs::Problem const&)
+  0.00      7.19     0.00       23     0.00     0.00  std::thread::_State_impl<std::thread::_Invoker<std::tuple<main::{lambda()#1}> > >::~_State_impl()
+  0.00      7.19     0.00       15     0.00     0.00  void std::__introsort_loop<__gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, long, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&)::{lambda(qbcs::Problem const&, qbcs::Problem const&)#1}> >(__gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, __gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, long, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&)::{lambda(qbcs::Problem const&, qbcs::Problem const&)#1}>)
+  0.00      7.19     0.00       13     0.00     0.00  (anonymous namespace)::fmt2(double)
+  0.00      7.19     0.00       13     0.00     0.00  void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&)
+  0.00      7.19     0.00       13     0.00     0.00  std::vector<int, std::allocator<int> >::~vector()
+  0.00      7.19     0.00       12     0.00     0.00  (anonymous namespace)::fmt_num(double)
+  0.00      7.19     0.00        8     0.00     0.00  std::vector<int, std::allocator<int> >::_M_default_append(unsigned long)
+  0.00      7.19     0.00        7     0.00     0.00  int __gnu_cxx::__stoa<long, int, char, int>(long (*)(char const*, char**, int), char const*, char const*, unsigned long*, int)
+  0.00      7.19     0.00        7     0.00     0.00  std::vector<int, std::allocator<int> >::_M_fill_assign(unsigned long, int const&)
+  0.00      7.19     0.00        5     0.00     0.00  void std::vector<qbcs::Synthesizer::RawGate, std::allocator<qbcs::Synthesizer::RawGate> >::_M_realloc_insert<qbcs::Synthesizer::RawGate>(__gnu_cxx::__normal_iterator<qbcs::Synthesizer::RawGate*, std::vector<qbcs::Synthesizer::RawGate, std::allocator<qbcs::Synthesizer::RawGate> > >, qbcs::Synthesizer::RawGate&&)
+  0.00      7.19     0.00        5     0.00     0.00  std::vector<double, std::allocator<double> >::_M_fill_assign(unsigned long, double const&)
+  0.00      7.19     0.00        4     0.00     0.00  void std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_realloc_insert<std::vector<int, std::allocator<int> > >(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> >*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> >&&)
+  0.00      7.19     0.00        4     0.00     0.00  std::vector<double, std::allocator<double> >::vector(unsigned long, double const&, std::allocator<double> const&)
+  0.00      7.19     0.00        4     0.00     0.00  std::vector<double, std::allocator<double> >::~vector()
+  0.00      7.19     0.00        3     0.00     0.00  qbcs::algo_name(qbcs::Algo)
+  0.00      7.19     0.00        3     0.00     0.00  void std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::_M_realloc_insert<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&>(__gnu_cxx::__normal_iterator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >*, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)
+  0.00      7.19     0.00        3     0.00     0.00  std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::~vector()
+  0.00      7.19     0.00        3     0.00     0.00  std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string<std::allocator<char> >(char const*, std::allocator<char> const&)
+  0.00      7.19     0.00        3     0.00     0.00  std::__cxx11::to_string(int)
+  0.00      7.19     0.00        3     0.00     0.00  std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&)
+  0.00      7.19     0.00        2     0.00     0.00  qbcs::Encoding::~Encoding()
+  0.00      7.19     0.00        1     0.00     0.00  qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&)
+  0.00      7.19     0.00        1     0.00     0.00  qbcs::Synthesizer::synthesize(qbcs::Sample const&, std::vector<qbcs::Gate, std::allocator<qbcs::Gate> >&)
+  0.00      7.19     0.00        1     0.00     0.00  qbcs::Synthesizer::Synthesizer(qbcs::Encoding const&)
+  0.00      7.19     0.00        1     0.00     0.00  qbcs::find_cycles(std::vector<int, std::allocator<int> > const&)
+  0.00      7.19     0.00        1     0.00     0.00  qbcs::algo_from_id(int, qbcs::Algo&)
+  0.00      7.19     0.00        1     0.00     0.00  qbcs::build_encoding(std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >, int)
+  0.00      7.19     0.00        1     0.00     7.18  qbcs::run_experiment(qbcs::Algo, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&)
+  0.00      7.19     0.00        1     0.00     0.00  qbcs::Rng::Rng(unsigned long)
+  0.00      7.19     0.00        1     0.00     0.00  qbcs::QLayers::init(qbcs::Encoding const&)
+  0.00      7.19     0.00        1     0.00     7.18  qbcs::run_aeqts(qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&)
+  0.00      7.19     0.00        1     0.00     7.18  qbcs::run_quantum(qbcs::QKind, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&)
+  0.00      7.19     0.00        1     0.00     0.00  qbcs::DataLoader::get(int, int) const
+  0.00      7.19     0.00        1     0.00     0.00  qbcs::DataLoader::info[abi:cxx11]() const
+  0.00      7.19     0.00        1     0.00     0.00  int* std::__copy_move<false, true, std::random_access_iterator_tag>::__copy_m<int const, int>(int const*, int const*, int*)
+  0.00      7.19     0.00        1     0.00     0.00  std::vector<qbcs::RunResult, std::allocator<qbcs::RunResult> >::~vector()
+  0.00      7.19     0.00        1     0.00     0.00  std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::~vector()
+  0.00      7.19     0.00        1     0.00     0.00  std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_default_append(unsigned long)
+  0.00      7.19     0.00        1     0.00     0.00  std::vector<std::thread, std::allocator<std::thread> >::~vector()
+  0.00      7.19     0.00        1     0.00     0.00  std::vector<int, std::allocator<int> >* std::__do_uninit_copy<__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> >*>(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, __gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> >*)
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
+
+Copyright (C) 2012-2024 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 4 byte(s) for 0.14% of 7.19 seconds
+
+index % time    self  children    called     name
+                0.00    7.18       1/1           main::{lambda()#1}::operator()() const [4]
+[1]     99.9    0.00    7.18       1         qbcs::run_experiment(qbcs::Algo, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [1]
+                0.00    7.18       1/1           qbcs::run_aeqts(qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [2]
+-----------------------------------------------
+                0.00    7.18       1/1           qbcs::run_experiment(qbcs::Algo, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [1]
+[2]     99.9    0.00    7.18       1         qbcs::run_aeqts(qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [2]
+                0.00    7.18       1/1           qbcs::run_quantum(qbcs::QKind, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [3]
+-----------------------------------------------
+                0.00    7.18       1/1           qbcs::run_aeqts(qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [2]
+[3]     99.9    0.00    7.18       1         qbcs::run_quantum(qbcs::QKind, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [3]
+                0.00    4.20    2000/2000        qbcs::Synthesizer::gate_count(qbcs::Sample const&) [6]
+                1.09    0.00    1020/1020        qbcs::rotate_best_vs_worst(qbcs::QLayers&, qbcs::Sample const&, qbcs::Sample const&, double) [8]
+                0.97    0.00    2000/2000        qbcs::sample_individual(qbcs::Encoding const&, qbcs::QLayers const&, qbcs::Rng&, qbcs::Sample&) [9]
+                0.01    0.91    2000/2000        qbcs::repair_l4_all(qbcs::Encoding const&, std::vector<unsigned char, std::allocator<unsigned char> >&, qbcs::Rng&) [10]
+                0.00    0.00       1/1           qbcs::Synthesizer::synthesize(qbcs::Sample const&, std::vector<qbcs::Gate, std::allocator<qbcs::Gate> >&) [14]
+                0.00    0.00    2000/2000        qbcs::evaluate(qbcs::Synthesizer&, qbcs::Sample const&, qbcs::Params const&, std::vector<int, std::allocator<int> > const&, long&) [29]
+                0.00    0.00     200/200         qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&) [34]
+                0.00    0.00       1/1           qbcs::Synthesizer::Synthesizer(qbcs::Encoding const&) [64]
+                0.00    0.00       1/1           qbcs::QLayers::init(qbcs::Encoding const&) [69]
+                0.00    0.00       1/5           std::vector<double, std::allocator<double> >::_M_fill_assign(unsigned long, double const&) [52]
+-----------------------------------------------
+                                                 <spontaneous>
+[4]     99.9    0.00    7.18                 main::{lambda()#1}::operator()() const [4]
+                0.00    7.18       1/1           qbcs::run_experiment(qbcs::Algo, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [1]
+                0.00    0.00       1/1           qbcs::Rng::Rng(unsigned long) [68]
+-----------------------------------------------
+                0.00    0.00       1/2001        qbcs::Synthesizer::synthesize(qbcs::Sample const&, std::vector<qbcs::Gate, std::allocator<qbcs::Gate> >&) [14]
+                0.24    3.96    2000/2001        qbcs::Synthesizer::gate_count(qbcs::Sample const&) [6]
+[5]     58.4    0.24    3.96    2001         qbcs::Synthesizer::run(qbcs::Sample const&) [5]
+                3.96    0.00 16372182/16372182     qbcs::Synthesizer::emit_transposition(qbcs::Sample const&, int, int) [7]
+                0.00    0.00    2001/2001        void std::__stable_sort_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>) [27]
+                0.00    0.00       1/8           std::vector<int, std::allocator<int> >::_M_default_append(unsigned long) [48]
+-----------------------------------------------
+                0.00    4.20    2000/2000        qbcs::run_quantum(qbcs::QKind, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [3]
+[6]     58.4    0.00    4.20    2000         qbcs::Synthesizer::gate_count(qbcs::Sample const&) [6]
+                0.24    3.96    2000/2001        qbcs::Synthesizer::run(qbcs::Sample const&) [5]
+-----------------------------------------------
+                3.96    0.00 16372182/16372182     qbcs::Synthesizer::run(qbcs::Sample const&) [5]
+[7]     55.1    3.96    0.00 16372182         qbcs::Synthesizer::emit_transposition(qbcs::Sample const&, int, int) [7]
+                0.00    0.00       5/5           void std::vector<qbcs::Synthesizer::RawGate, std::allocator<qbcs::Synthesizer::RawGate> >::_M_realloc_insert<qbcs::Synthesizer::RawGate>(__gnu_cxx::__normal_iterator<qbcs::Synthesizer::RawGate*, std::vector<qbcs::Synthesizer::RawGate, std::allocator<qbcs::Synthesizer::RawGate> > >, qbcs::Synthesizer::RawGate&&) [51]
+-----------------------------------------------
+                1.09    0.00    1020/1020        qbcs::run_quantum(qbcs::QKind, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [3]
+[8]     15.2    1.09    0.00    1020         qbcs::rotate_best_vs_worst(qbcs::QLayers&, qbcs::Sample const&, qbcs::Sample const&, double) [8]
+                0.00    0.00    8000/8000        qbcs::Sample::layer(int) const [21]
+                0.00    0.00    4000/4000        qbcs::QLayers::layer(int) [25]
+-----------------------------------------------
+                0.97    0.00    2000/2000        qbcs::run_quantum(qbcs::QKind, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [3]
+[9]     13.5    0.97    0.00    2000         qbcs::sample_individual(qbcs::Encoding const&, qbcs::QLayers const&, qbcs::Rng&, qbcs::Sample&) [9]
+                0.00    0.00    2000/2000        qbcs::Sample::resize(qbcs::Encoding const&) [28]
+-----------------------------------------------
+                0.01    0.91    2000/2000        qbcs::run_quantum(qbcs::QKind, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [3]
+[10]    12.8    0.01    0.91    2000         qbcs::repair_l4_all(qbcs::Encoding const&, std::vector<unsigned char, std::allocator<unsigned char> >&, qbcs::Rng&) [10]
+                0.91    0.00 16368000/16368000     qbcs::Rng::sample_indices(int, int, std::vector<int, std::allocator<int> >&) [11]
+-----------------------------------------------
+                0.91    0.00 16368000/16368000     qbcs::repair_l4_all(qbcs::Encoding const&, std::vector<unsigned char, std::allocator<unsigned char> >&, qbcs::Rng&) [10]
+[11]    12.7    0.91    0.00 16368000         qbcs::Rng::sample_indices(int, int, std::vector<int, std::allocator<int> >&) [11]
+                0.00    0.00       6/13          void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&) [45]
+-----------------------------------------------
+                                                 <spontaneous>
+[12]     0.1    0.00    0.01                 main [12]
+                0.01    0.00       1/1           qbcs::circuit_to_python_str[abi:cxx11](std::vector<qbcs::Gate, std::allocator<qbcs::Gate> > const&, int) [13]
+                0.00    0.00      74/74          bool std::operator==<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*) [40]
+                0.00    0.00      13/13          (anonymous namespace)::fmt2(double) [44]
+                0.00    0.00      12/12          (anonymous namespace)::fmt_num(double) [47]
+                0.00    0.00       8/23          std::thread::_State_impl<std::thread::_Invoker<std::tuple<main::{lambda()#1}> > >::~_State_impl() [42]
+                0.00    0.00       7/7           int __gnu_cxx::__stoa<long, int, char, int>(long (*)(char const*, char**, int), char const*, char const*, unsigned long*, int) [49]
+                0.00    0.00       4/4           std::vector<double, std::allocator<double> >::vector(unsigned long, double const&, std::allocator<double> const&) [54]
+                0.00    0.00       4/4           std::vector<double, std::allocator<double> >::~vector() [55]
+                0.00    0.00       3/3           std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string<std::allocator<char> >(char const*, std::allocator<char> const&) [59]
+                0.00    0.00       3/3           std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::~vector() [58]
+                0.00    0.00       3/3           qbcs::algo_name(qbcs::Algo) [56]
+                0.00    0.00       3/3           std::__cxx11::to_string(int) [60]
+                0.00    0.00       3/3           std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&) [61]
+                0.00    0.00       3/3           void std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::_M_realloc_insert<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&>(__gnu_cxx::__normal_iterator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >*, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [57]
+                0.00    0.00       2/2           qbcs::Encoding::~Encoding() [62]
+                0.00    0.00       1/1           qbcs::algo_from_id(int, qbcs::Algo&) [66]
+                0.00    0.00       1/1           std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::~vector() [74]
+                0.00    0.00       1/1           qbcs::DataLoader::get(int, int) const [70]
+                0.00    0.00       1/1           qbcs::find_cycles(std::vector<int, std::allocator<int> > const&) [65]
+                0.00    0.00       1/1           std::vector<int, std::allocator<int> >* std::__do_uninit_copy<__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> >*>(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, __gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> >*) [77]
+                0.00    0.00       1/1           qbcs::build_encoding(std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >, int) [67]
+                0.00    0.00       1/1           std::vector<std::thread, std::allocator<std::thread> >::~vector() [76]
+                0.00    0.00       1/1           std::vector<qbcs::RunResult, std::allocator<qbcs::RunResult> >::~vector() [73]
+                0.00    0.00       1/13          std::vector<int, std::allocator<int> >::~vector() [46]
+                0.00    0.00       1/1           qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [63]
+                0.00    0.00       1/1           qbcs::DataLoader::info[abi:cxx11]() const [71]
+                0.00    0.00       1/1           int* std::__copy_move<false, true, std::random_access_iterator_tag>::__copy_m<int const, int>(int const*, int const*, int*) [72]
+-----------------------------------------------
+                0.01    0.00       1/1           main [12]
+[13]     0.1    0.01    0.00       1         qbcs::circuit_to_python_str[abi:cxx11](std::vector<qbcs::Gate, std::allocator<qbcs::Gate> > const&, int) [13]
+-----------------------------------------------
+                0.00    0.00       1/1           qbcs::run_quantum(qbcs::QKind, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [3]
+[14]     0.0    0.00    0.00       1         qbcs::Synthesizer::synthesize(qbcs::Sample const&, std::vector<qbcs::Gate, std::allocator<qbcs::Gate> >&) [14]
+                0.00    0.00       1/2001        qbcs::Synthesizer::run(qbcs::Sample const&) [5]
+-----------------------------------------------
+                0.00    0.00    8000/8000        qbcs::rotate_best_vs_worst(qbcs::QLayers&, qbcs::Sample const&, qbcs::Sample const&, double) [8]
+[21]     0.0    0.00    0.00    8000         qbcs::Sample::layer(int) const [21]
+-----------------------------------------------
+                0.00    0.00    8000/8000        qbcs::Sample::resize(qbcs::Encoding const&) [28]
+[22]     0.0    0.00    0.00    8000         std::vector<unsigned char, std::allocator<unsigned char> >::_M_fill_assign(unsigned long, unsigned char const&) [22]
+-----------------------------------------------
+                0.00    0.00    4002/4002        void std::__stable_sort_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>) [27]
+[23]     0.0    0.00    0.00    4002         void std::__insertion_sort<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>) [23]
+-----------------------------------------------
+                0.00    0.00    4002/4002        void std::__stable_sort_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>) [27]
+[24]     0.0    0.00    0.00    4002         void std::__merge_sort_with_buffer<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>) [24]
+-----------------------------------------------
+                0.00    0.00    4000/4000        qbcs::rotate_best_vs_worst(qbcs::QLayers&, qbcs::Sample const&, qbcs::Sample const&, double) [8]
+[25]     0.0    0.00    0.00    4000         qbcs::QLayers::layer(int) [25]
+-----------------------------------------------
+                0.00    0.00    2001/2001        void std::__stable_sort_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>) [27]
+[26]     0.0    0.00    0.00    2001         void std::__merge_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>) [26]
+-----------------------------------------------
+                0.00    0.00    2001/2001        qbcs::Synthesizer::run(qbcs::Sample const&) [5]
+[27]     0.0    0.00    0.00    2001         void std::__stable_sort_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>) [27]
+                0.00    0.00    4002/4002        void std::__insertion_sort<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>) [23]
+                0.00    0.00    4002/4002        void std::__merge_sort_with_buffer<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>) [24]
+                0.00    0.00    2001/2001        void std::__merge_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>) [26]
+-----------------------------------------------
+                0.00    0.00    2000/2000        qbcs::sample_individual(qbcs::Encoding const&, qbcs::QLayers const&, qbcs::Rng&, qbcs::Sample&) [9]
+[28]     0.0    0.00    0.00    2000         qbcs::Sample::resize(qbcs::Encoding const&) [28]
+                0.00    0.00    8000/8000        std::vector<unsigned char, std::allocator<unsigned char> >::_M_fill_assign(unsigned long, unsigned char const&) [22]
+-----------------------------------------------
+                0.00    0.00    2000/2000        qbcs::run_quantum(qbcs::QKind, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [3]
+[29]     0.0    0.00    0.00    2000         qbcs::evaluate(qbcs::Synthesizer&, qbcs::Sample const&, qbcs::Params const&, std::vector<int, std::allocator<int> > const&, long&) [29]
+-----------------------------------------------
+                0.00    0.00     803/803         qbcs::DataLoader::parse_table(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::vector<int, std::allocator<int> >&, int&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [37]
+[30]     0.0    0.00    0.00     803         void std::vector<int, std::allocator<int> >::_M_realloc_insert<int>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int&&) [30]
+-----------------------------------------------
+                0.00    0.00     400/400         void std::__stable_sort_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>) [36]
+[31]     0.0    0.00    0.00     400         void std::__insertion_sort<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>) [31]
+-----------------------------------------------
+                0.00    0.00     400/400         void std::__stable_sort_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>) [36]
+[32]     0.0    0.00    0.00     400         void std::__merge_sort_with_buffer<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>) [32]
+-----------------------------------------------
+                                  67             qbcs::Sample::Sample(qbcs::Sample const&) [33]
+                0.00    0.00      48/345         void std::vector<qbcs::Problem, std::allocator<qbcs::Problem> >::_M_realloc_insert<qbcs::Problem const&>(__gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, qbcs::Problem const&) [41]
+                0.00    0.00      82/345         qbcs::DataLoader::parse_table(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::vector<int, std::allocator<int> >&, int&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [37]
+                0.00    0.00     215/345         qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [63]
+[33]     0.0    0.00    0.00     345+67      qbcs::Sample::Sample(qbcs::Sample const&) [33]
+                                  67             qbcs::Sample::Sample(qbcs::Sample const&) [33]
+-----------------------------------------------
+                0.00    0.00     200/200         qbcs::run_quantum(qbcs::QKind, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [3]
+[34]     0.0    0.00    0.00     200         qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&) [34]
+                0.00    0.00     200/200         void std::__stable_sort_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>) [36]
+                0.00    0.00       1/8           std::vector<int, std::allocator<int> >::_M_default_append(unsigned long) [48]
+-----------------------------------------------
+                0.00    0.00     200/200         void std::__stable_sort_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>) [36]
+[35]     0.0    0.00    0.00     200         void std::__merge_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>) [35]
+-----------------------------------------------
+                0.00    0.00     200/200         qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&) [34]
+[36]     0.0    0.00    0.00     200         void std::__stable_sort_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>) [36]
+                0.00    0.00     400/400         void std::__insertion_sort<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>) [31]
+                0.00    0.00     400/400         void std::__merge_sort_with_buffer<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>) [32]
+                0.00    0.00     200/200         void std::__merge_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>) [35]
+-----------------------------------------------
+                0.00    0.00      82/82          qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [63]
+[37]     0.0    0.00    0.00      82         qbcs::DataLoader::parse_table(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::vector<int, std::allocator<int> >&, int&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [37]
+                0.00    0.00     803/803         void std::vector<int, std::allocator<int> >::_M_realloc_insert<int>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int&&) [30]
+                0.00    0.00      82/345         qbcs::Sample::Sample(qbcs::Sample const&) [33]
+                0.00    0.00      82/82          void std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::_M_realloc_insert<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >(__gnu_cxx::__normal_iterator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >*, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&) [39]
+                0.00    0.00      82/82          qbcs::is_permutation(std::vector<int, std::allocator<int> > const&, int&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [38]
+-----------------------------------------------
+                0.00    0.00      82/82          qbcs::DataLoader::parse_table(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::vector<int, std::allocator<int> >&, int&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [37]
+[38]     0.0    0.00    0.00      82         qbcs::is_permutation(std::vector<int, std::allocator<int> > const&, int&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [38]
+-----------------------------------------------
+                0.00    0.00      82/82          qbcs::DataLoader::parse_table(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::vector<int, std::allocator<int> >&, int&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [37]
+[39]     0.0    0.00    0.00      82         void std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::_M_realloc_insert<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >(__gnu_cxx::__normal_iterator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >*, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&) [39]
+-----------------------------------------------
+                0.00    0.00      74/74          main [12]
+[40]     0.0    0.00    0.00      74         bool std::operator==<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*) [40]
+-----------------------------------------------
+                0.00    0.00      48/48          qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [63]
+[41]     0.0    0.00    0.00      48         void std::vector<qbcs::Problem, std::allocator<qbcs::Problem> >::_M_realloc_insert<qbcs::Problem const&>(__gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, qbcs::Problem const&) [41]
+                0.00    0.00      48/345         qbcs::Sample::Sample(qbcs::Sample const&) [33]
+-----------------------------------------------
+                0.00    0.00       3/23          void std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::_M_realloc_insert<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&>(__gnu_cxx::__normal_iterator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >*, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [57]
+                0.00    0.00       8/23          main [12]
+                0.00    0.00      12/23          (anonymous namespace)::fmt2(double) [44]
+[42]     0.0    0.00    0.00      23         std::thread::_State_impl<std::thread::_Invoker<std::tuple<main::{lambda()#1}> > >::~_State_impl() [42]
+-----------------------------------------------
+                0.00    0.00      15/15          qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [63]
+[43]     0.0    0.00    0.00      15         void std::__introsort_loop<__gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, long, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&)::{lambda(qbcs::Problem const&, qbcs::Problem const&)#1}> >(__gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, __gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, long, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&)::{lambda(qbcs::Problem const&, qbcs::Problem const&)#1}>) [43]
+-----------------------------------------------
+                                  15             (anonymous namespace)::fmt2(double) [44]
+                0.00    0.00      13/13          main [12]
+[44]     0.0    0.00    0.00      13+15      (anonymous namespace)::fmt2(double) [44]
+                0.00    0.00      12/23          std::thread::_State_impl<std::thread::_Invoker<std::tuple<main::{lambda()#1}> > >::~_State_impl() [42]
+                                  15             (anonymous namespace)::fmt2(double) [44]
+-----------------------------------------------
+                0.00    0.00       6/13          qbcs::Rng::sample_indices(int, int, std::vector<int, std::allocator<int> >&) [11]
+                0.00    0.00       7/13          qbcs::build_encoding(std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >, int) [67]
+[45]     0.0    0.00    0.00      13         void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&) [45]
+-----------------------------------------------
+                0.00    0.00       1/13          main [12]
+                0.00    0.00      12/13          (anonymous namespace)::fmt_num(double) [47]
+[46]     0.0    0.00    0.00      13         std::vector<int, std::allocator<int> >::~vector() [46]
+-----------------------------------------------
+                0.00    0.00      12/12          main [12]
+[47]     0.0    0.00    0.00      12         (anonymous namespace)::fmt_num(double) [47]
+                0.00    0.00      12/13          std::vector<int, std::allocator<int> >::~vector() [46]
+-----------------------------------------------
+                0.00    0.00       1/8           qbcs::Synthesizer::Synthesizer(qbcs::Encoding const&) [64]
+                0.00    0.00       1/8           qbcs::Synthesizer::run(qbcs::Sample const&) [5]
+                0.00    0.00       1/8           qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&) [34]
+                0.00    0.00       5/8           qbcs::build_encoding(std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >, int) [67]
+[48]     0.0    0.00    0.00       8         std::vector<int, std::allocator<int> >::_M_default_append(unsigned long) [48]
+-----------------------------------------------
+                0.00    0.00       7/7           main [12]
+[49]     0.0    0.00    0.00       7         int __gnu_cxx::__stoa<long, int, char, int>(long (*)(char const*, char**, int), char const*, char const*, unsigned long*, int) [49]
+-----------------------------------------------
+                0.00    0.00       7/7           qbcs::build_encoding(std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >, int) [67]
+[50]     0.0    0.00    0.00       7         std::vector<int, std::allocator<int> >::_M_fill_assign(unsigned long, int const&) [50]
+-----------------------------------------------
+                0.00    0.00       5/5           qbcs::Synthesizer::emit_transposition(qbcs::Sample const&, int, int) [7]
+[51]     0.0    0.00    0.00       5         void std::vector<qbcs::Synthesizer::RawGate, std::allocator<qbcs::Synthesizer::RawGate> >::_M_realloc_insert<qbcs::Synthesizer::RawGate>(__gnu_cxx::__normal_iterator<qbcs::Synthesizer::RawGate*, std::vector<qbcs::Synthesizer::RawGate, std::allocator<qbcs::Synthesizer::RawGate> > >, qbcs::Synthesizer::RawGate&&) [51]
+-----------------------------------------------
+                0.00    0.00       1/5           qbcs::run_quantum(qbcs::QKind, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [3]
+                0.00    0.00       4/5           qbcs::QLayers::init(qbcs::Encoding const&) [69]
+[52]     0.0    0.00    0.00       5         std::vector<double, std::allocator<double> >::_M_fill_assign(unsigned long, double const&) [52]
+-----------------------------------------------
+                0.00    0.00       4/4           qbcs::find_cycles(std::vector<int, std::allocator<int> > const&) [65]
+[53]     0.0    0.00    0.00       4         void std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_realloc_insert<std::vector<int, std::allocator<int> > >(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> >*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> >&&) [53]
+-----------------------------------------------
+                0.00    0.00       4/4           main [12]
+[54]     0.0    0.00    0.00       4         std::vector<double, std::allocator<double> >::vector(unsigned long, double const&, std::allocator<double> const&) [54]
+-----------------------------------------------
+                0.00    0.00       4/4           main [12]
+[55]     0.0    0.00    0.00       4         std::vector<double, std::allocator<double> >::~vector() [55]
+-----------------------------------------------
+                0.00    0.00       3/3           main [12]
+[56]     0.0    0.00    0.00       3         qbcs::algo_name(qbcs::Algo) [56]
+-----------------------------------------------
+                0.00    0.00       3/3           main [12]
+[57]     0.0    0.00    0.00       3         void std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::_M_realloc_insert<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&>(__gnu_cxx::__normal_iterator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >*, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [57]
+                0.00    0.00       3/23          std::thread::_State_impl<std::thread::_Invoker<std::tuple<main::{lambda()#1}> > >::~_State_impl() [42]
+-----------------------------------------------
+                0.00    0.00       3/3           main [12]
+[58]     0.0    0.00    0.00       3         std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::~vector() [58]
+-----------------------------------------------
+                0.00    0.00       3/3           main [12]
+[59]     0.0    0.00    0.00       3         std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string<std::allocator<char> >(char const*, std::allocator<char> const&) [59]
+-----------------------------------------------
+                0.00    0.00       3/3           main [12]
+[60]     0.0    0.00    0.00       3         std::__cxx11::to_string(int) [60]
+-----------------------------------------------
+                0.00    0.00       3/3           main [12]
+[61]     0.0    0.00    0.00       3         std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&) [61]
+-----------------------------------------------
+                0.00    0.00       2/2           main [12]
+[62]     0.0    0.00    0.00       2         qbcs::Encoding::~Encoding() [62]
+-----------------------------------------------
+                0.00    0.00       1/1           main [12]
+[63]     0.0    0.00    0.00       1         qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [63]
+                0.00    0.00     215/345         qbcs::Sample::Sample(qbcs::Sample const&) [33]
+                0.00    0.00      82/82          qbcs::DataLoader::parse_table(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::vector<int, std::allocator<int> >&, int&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [37]
+                0.00    0.00      48/48          void std::vector<qbcs::Problem, std::allocator<qbcs::Problem> >::_M_realloc_insert<qbcs::Problem const&>(__gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, qbcs::Problem const&) [41]
+                0.00    0.00      15/15          void std::__introsort_loop<__gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, long, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&)::{lambda(qbcs::Problem const&, qbcs::Problem const&)#1}> >(__gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, __gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, long, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&)::{lambda(qbcs::Problem const&, qbcs::Problem const&)#1}>) [43]
+-----------------------------------------------
+                0.00    0.00       1/1           qbcs::run_quantum(qbcs::QKind, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [3]
+[64]     0.0    0.00    0.00       1         qbcs::Synthesizer::Synthesizer(qbcs::Encoding const&) [64]
+                0.00    0.00       1/8           std::vector<int, std::allocator<int> >::_M_default_append(unsigned long) [48]
+-----------------------------------------------
+                0.00    0.00       1/1           main [12]
+[65]     0.0    0.00    0.00       1         qbcs::find_cycles(std::vector<int, std::allocator<int> > const&) [65]
+                0.00    0.00       4/4           void std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_realloc_insert<std::vector<int, std::allocator<int> > >(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> >*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> >&&) [53]
+-----------------------------------------------
+                0.00    0.00       1/1           main [12]
+[66]     0.0    0.00    0.00       1         qbcs::algo_from_id(int, qbcs::Algo&) [66]
+-----------------------------------------------
+                0.00    0.00       1/1           main [12]
+[67]     0.0    0.00    0.00       1         qbcs::build_encoding(std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >, int) [67]
+                0.00    0.00       7/7           std::vector<int, std::allocator<int> >::_M_fill_assign(unsigned long, int const&) [50]
+                0.00    0.00       7/13          void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&) [45]
+                0.00    0.00       5/8           std::vector<int, std::allocator<int> >::_M_default_append(unsigned long) [48]
+                0.00    0.00       1/1           std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_default_append(unsigned long) [75]
+-----------------------------------------------
+                0.00    0.00       1/1           main::{lambda()#1}::operator()() const [4]
+[68]     0.0    0.00    0.00       1         qbcs::Rng::Rng(unsigned long) [68]
+-----------------------------------------------
+                0.00    0.00       1/1           qbcs::run_quantum(qbcs::QKind, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [3]
+[69]     0.0    0.00    0.00       1         qbcs::QLayers::init(qbcs::Encoding const&) [69]
+                0.00    0.00       4/5           std::vector<double, std::allocator<double> >::_M_fill_assign(unsigned long, double const&) [52]
+-----------------------------------------------
+                0.00    0.00       1/1           main [12]
+[70]     0.0    0.00    0.00       1         qbcs::DataLoader::get(int, int) const [70]
+-----------------------------------------------
+                0.00    0.00       1/1           main [12]
+[71]     0.0    0.00    0.00       1         qbcs::DataLoader::info[abi:cxx11]() const [71]
+-----------------------------------------------
+                0.00    0.00       1/1           main [12]
+[72]     0.0    0.00    0.00       1         int* std::__copy_move<false, true, std::random_access_iterator_tag>::__copy_m<int const, int>(int const*, int const*, int*) [72]
+-----------------------------------------------
+                0.00    0.00       1/1           main [12]
+[73]     0.0    0.00    0.00       1         std::vector<qbcs::RunResult, std::allocator<qbcs::RunResult> >::~vector() [73]
+-----------------------------------------------
+                0.00    0.00       1/1           main [12]
+[74]     0.0    0.00    0.00       1         std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::~vector() [74]
+-----------------------------------------------
+                0.00    0.00       1/1           qbcs::build_encoding(std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >, int) [67]
+[75]     0.0    0.00    0.00       1         std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_default_append(unsigned long) [75]
+-----------------------------------------------
+                0.00    0.00       1/1           main [12]
+[76]     0.0    0.00    0.00       1         std::vector<std::thread, std::allocator<std::thread> >::~vector() [76]
+-----------------------------------------------
+                0.00    0.00       1/1           main [12]
+[77]     0.0    0.00    0.00       1         std::vector<int, std::allocator<int> >* std::__do_uninit_copy<__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> >*>(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, __gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> >*) [77]
+-----------------------------------------------
+
+ This table describes the call tree of the program, and was sorted by
+ the total amount of time spent in each function and its children.
+
+ Each entry in this table consists of several lines.  The line with the
+ index number at the left hand margin lists the current function.
+ The lines above it list the functions that called this function,
+ and the lines below it list the functions this one called.
+ This line lists:
+     index	A unique number given to each element of the table.
+		Index numbers are sorted numerically.
+		The index number is printed next to every function name so
+		it is easier to look up where the function is in the table.
+
+     % time	This is the percentage of the `total' time that was spent
+		in this function and its children.  Note that due to
+		different viewpoints, functions excluded by options, etc,
+		these numbers will NOT add up to 100%.
+
+     self	This is the total amount of time spent in this function.
+
+     children	This is the total amount of time propagated into this
+		function by its children.
+
+     called	This is the number of times the function was called.
+		If the function called itself recursively, the number
+		only includes non-recursive calls, and is followed by
+		a `+' and the number of recursive calls.
+
+     name	The name of the current function.  The index number is
+		printed after it.  If the function is a member of a
+		cycle, the cycle number is printed between the
+		function's name and the index number.
+
+
+ For the function's parents, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the function into this parent.
+
+     children	This is the amount of time that was propagated from
+		the function's children into this parent.
+
+     called	This is the number of times this parent called the
+		function `/' the total number of times the function
+		was called.  Recursive calls to the function are not
+		included in the number after the `/'.
+
+     name	This is the name of the parent.  The parent's index
+		number is printed after it.  If the parent is a
+		member of a cycle, the cycle number is printed between
+		the name and the index number.
+
+ If the parents of the function cannot be determined, the word
+ `<spontaneous>' is printed in the `name' field, and all the other
+ fields are blank.
+
+ For the function's children, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the child into the function.
+
+     children	This is the amount of time that was propagated from the
+		child's children to the function.
+
+     called	This is the number of times the function called
+		this child `/' the total number of times the child
+		was called.  Recursive calls by the child are not
+		listed in the number after the `/'.
+
+     name	This is the name of the child.  The child's index
+		number is printed after it.  If the child is a
+		member of a cycle, the cycle number is printed
+		between the name and the index number.
+
+ If there are any cycles (circles) in the call graph, there is an
+ entry for the cycle-as-a-whole.  This entry shows who called the
+ cycle (as parents) and the members of the cycle (as children.)
+ The `+' recursive calls entry shows the number of function calls that
+ were internal to the cycle, and the calls entry for each member shows,
+ for that member, how many times it was called from other members of
+ the cycle.
+
+Copyright (C) 2012-2024 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+Index by function name
+
+  [44] (anonymous namespace)::fmt2(double) [62] qbcs::Encoding::~Encoding() [52] std::vector<double, std::allocator<double> >::_M_fill_assign(unsigned long, double const&)
+  [47] (anonymous namespace)::fmt_num(double) [29] qbcs::evaluate(qbcs::Synthesizer&, qbcs::Sample const&, qbcs::Params const&, std::vector<int, std::allocator<int> > const&, long&) [54] std::vector<double, std::allocator<double> >::vector(unsigned long, double const&, std::allocator<double> const&)
+  [37] qbcs::DataLoader::parse_table(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::vector<int, std::allocator<int> >&, int&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [56] qbcs::algo_name(qbcs::Algo) [55] std::vector<double, std::allocator<double> >::~vector()
+  [63] qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [2] qbcs::run_aeqts(qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [22] std::vector<unsigned char, std::allocator<unsigned char> >::_M_fill_assign(unsigned long, unsigned char const&)
+   [6] qbcs::Synthesizer::gate_count(qbcs::Sample const&) [3] qbcs::run_quantum(qbcs::QKind, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [50] std::vector<int, std::allocator<int> >::_M_fill_assign(unsigned long, int const&)
+  [14] qbcs::Synthesizer::synthesize(qbcs::Sample const&, std::vector<qbcs::Gate, std::allocator<qbcs::Gate> >&) [38] qbcs::is_permutation(std::vector<int, std::allocator<int> > const&, int&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) [48] std::vector<int, std::allocator<int> >::_M_default_append(unsigned long)
+   [7] qbcs::Synthesizer::emit_transposition(qbcs::Sample const&, int, int) [8] qbcs::rotate_best_vs_worst(qbcs::QLayers&, qbcs::Sample const&, qbcs::Sample const&, double) [45] void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&)
+   [5] qbcs::Synthesizer::run(qbcs::Sample const&) [49] int __gnu_cxx::__stoa<long, int, char, int>(long (*)(char const*, char**, int), char const*, char const*, unsigned long*, int) [30] void std::vector<int, std::allocator<int> >::_M_realloc_insert<int>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int&&)
+  [64] qbcs::Synthesizer::Synthesizer(qbcs::Encoding const&) [70] qbcs::DataLoader::get(int, int) const [46] std::vector<int, std::allocator<int> >::~vector()
+  [65] qbcs::find_cycles(std::vector<int, std::allocator<int> > const&) [71] qbcs::DataLoader::info[abi:cxx11]() const [59] std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string<std::allocator<char> >(char const*, std::allocator<char> const&)
+  [66] qbcs::algo_from_id(int, qbcs::Algo&) [21] qbcs::Sample::layer(int) const [60] std::__cxx11::to_string(int)
+  [10] qbcs::repair_l4_all(qbcs::Encoding const&, std::vector<unsigned char, std::allocator<unsigned char> >&, qbcs::Rng&) [72] int* std::__copy_move<false, true, std::random_access_iterator_tag>::__copy_m<int const, int>(int const*, int const*, int*) [77] std::vector<int, std::allocator<int> >* std::__do_uninit_copy<__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> >*>(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, __gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> >*)
+  [34] qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&) [42] std::thread::_State_impl<std::thread::_Invoker<std::tuple<main::{lambda()#1}> > >::~_State_impl() [23] void std::__insertion_sort<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>)
+  [67] qbcs::build_encoding(std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >, int) [51] void std::vector<qbcs::Synthesizer::RawGate, std::allocator<qbcs::Synthesizer::RawGate> >::_M_realloc_insert<qbcs::Synthesizer::RawGate>(__gnu_cxx::__normal_iterator<qbcs::Synthesizer::RawGate*, std::vector<qbcs::Synthesizer::RawGate, std::allocator<qbcs::Synthesizer::RawGate> > >, qbcs::Synthesizer::RawGate&&) [31] void std::__insertion_sort<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>)
+   [1] qbcs::run_experiment(qbcs::Algo, qbcs::Encoding const&, qbcs::Params const&, qbcs::Rng&, std::vector<int, std::allocator<int> > const&) [41] void std::vector<qbcs::Problem, std::allocator<qbcs::Problem> >::_M_realloc_insert<qbcs::Problem const&>(__gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, qbcs::Problem const&) [43] void std::__introsort_loop<__gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, long, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&)::{lambda(qbcs::Problem const&, qbcs::Problem const&)#1}> >(__gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, __gnu_cxx::__normal_iterator<qbcs::Problem*, std::vector<qbcs::Problem, std::allocator<qbcs::Problem> > >, long, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::DataLoader::load(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&)::{lambda(qbcs::Problem const&, qbcs::Problem const&)#1}>)
+   [9] qbcs::sample_individual(qbcs::Encoding const&, qbcs::QLayers const&, qbcs::Rng&, qbcs::Sample&) [73] std::vector<qbcs::RunResult, std::allocator<qbcs::RunResult> >::~vector() [26] void std::__merge_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>)
+  [13] qbcs::circuit_to_python_str[abi:cxx11](std::vector<qbcs::Gate, std::allocator<qbcs::Gate> > const&, int) [57] void std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::_M_realloc_insert<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&>(__gnu_cxx::__normal_iterator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >*, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [35] void std::__merge_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, long, long, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>)
+  [11] qbcs::Rng::sample_indices(int, int, std::vector<int, std::allocator<int> >&) [39] void std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::_M_realloc_insert<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >(__gnu_cxx::__normal_iterator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >*, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&) [27] void std::__stable_sort_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>)
+  [68] qbcs::Rng::Rng(unsigned long) [74] std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::~vector() [36] void std::__stable_sort_adaptive<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>)
+  [28] qbcs::Sample::resize(qbcs::Encoding const&) [75] std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_default_append(unsigned long) [24] void std::__merge_sort_with_buffer<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::Synthesizer::run(qbcs::Sample const&)::{lambda(int, int)#1}>)
+  [33] qbcs::Sample::Sample(qbcs::Sample const&) [53] void std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_realloc_insert<std::vector<int, std::allocator<int> > >(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> >*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> >&&) [32] void std::__merge_sort_with_buffer<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}> >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int*, __gnu_cxx::__ops::_Iter_comp_iter<qbcs::argsort_stable(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&)::{lambda(int, int)#1}>)
+  [69] qbcs::QLayers::init(qbcs::Encoding const&) [58] std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::~vector() [40] bool std::operator==<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)
+  [25] qbcs::QLayers::layer(int) [76] std::vector<std::thread, std::allocator<std::thread> >::~vector() [61] std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&)

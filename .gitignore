@@ -1,0 +1,27 @@
+# build outputs
+build*/
+bin/
+*.exe
+*.obj
+*.o
+*.a
+*.lib
+
+# experiment / test outputs (can exceed GitHub's 100 MB file limit)
+exp/
+exp_*/
+regression*/
+benchmark-results/
+benchmark_*/
+test-results/
+sanitizer_*/
+
+# Python
+__pycache__/
+*.pyc
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
